@@ -37,6 +37,7 @@ export const Route =
 
 type InstallerStatus = {
   ok: boolean;
+  installationComplete?: boolean;
   config: {
     checked: boolean;
     completed: boolean;
@@ -54,9 +55,10 @@ type InstallerStatus = {
   customers: {
     checked: boolean;
     completed: boolean;
-    count: number | null;
+    count: number;
     verificationAvailable: boolean;
     message: string;
+    error: string;
   };
 };
 
@@ -118,10 +120,12 @@ function InstallerHubPage() {
         config: remoteConfig,
         installer: data,
         message:
-          data.config?.completed
-            ? "Configuración del cliente disponible."
-            : data.config?.error ||
-              "La configuración de empresa todavía está pendiente.",
+          data.installationComplete
+            ? "Empresa, productos y clientes están verificados."
+            : data.config?.completed
+              ? "Configuración del cliente disponible. Continúa con los pasos pendientes."
+              : data.config?.error ||
+                "La configuración de empresa todavía está pendiente.",
       });
     } catch (error) {
       setState({
@@ -165,17 +169,21 @@ function InstallerHubPage() {
   const productsCount =
     state.installer?.products.count ?? 0;
 
-  const customersVerified =
-    state.installer?.customers.verificationAvailable === true;
+  const customersCount =
+    state.installer?.customers.count ?? 0;
+
+  const customersError =
+    state.installer?.customers.error || "";
+
+  const customersReadSucceeded =
+    state.installer?.customers.checked === true &&
+    !customersError;
 
   const customersCompleted =
     state.installer?.customers.completed === true;
 
   const fullyVerified =
-    configCompleted &&
-    productsCompleted &&
-    customersVerified &&
-    customersCompleted;
+    state.installer?.installationComplete === true;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -236,7 +244,7 @@ function InstallerHubPage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6">
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatusCard
             icon={Database}
             label="Configuración"
@@ -262,6 +270,23 @@ function InstallerHubPage() {
             }
             tone={
               productsCompleted
+                ? "success"
+                : "neutral"
+            }
+          />
+
+          <StatusCard
+            icon={Users}
+            label="Clientes"
+            value={
+              customersCompleted
+                ? `${customersCount} guardados`
+                : customersError
+                  ? "Sin verificar"
+                  : "Pendiente"
+            }
+            tone={
+              customersCompleted
                 ? "success"
                 : "neutral"
             }
@@ -298,7 +323,7 @@ function InstallerHubPage() {
               <Circle className="mt-0.5 h-5 w-5 text-muted-foreground" />
             )}
 
-            <div>
+            <div className="min-w-0">
               <h2 className="font-semibold">
                 Estado del instalador
               </h2>
@@ -313,9 +338,9 @@ function InstallerHubPage() {
                 </p>
               )}
 
-              {!customersVerified && (
-                <p className="mt-3 rounded-xl border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Clientes: guardado disponible, pero la lectura remota para verificar cantidad todavía no está implementada en el backend. No se marcará como completado hasta poder comprobarlo de forma real.
+              {customersError && (
+                <p className="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                  Clientes: {customersError}
                 </p>
               )}
             </div>
@@ -387,16 +412,21 @@ function InstallerHubPage() {
               title="Clientes"
               description="Carga clientes iniciales y deja preparada la base comercial."
               detail={
-                customersVerified
-                  ? customersCompleted
-                    ? `${state.installer?.customers.count ?? 0} clientes verificados.`
-                    : "No hay clientes guardados."
-                  : "Pendiente de verificación remota."
+                customersCompleted
+                  ? `${customersCount} cliente${customersCount === 1 ? "" : "s"} verificado${customersCount === 1 ? "" : "s"} en backend.`
+                  : customersError
+                    ? `Verificación pendiente: ${customersError}`
+                    : customersReadSucceeded
+                      ? "No hay clientes iniciales guardados."
+                      : "Comprobando clientes en backend."
               }
               href="/setup-clientes"
-              action="Configurar clientes"
+              action={
+                customersCompleted
+                  ? "Revisar clientes"
+                  : "Configurar clientes"
+              }
               completed={
-                customersVerified &&
                 customersCompleted
               }
             />
