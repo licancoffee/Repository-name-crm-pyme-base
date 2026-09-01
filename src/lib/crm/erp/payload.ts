@@ -1,5 +1,9 @@
 import { lineStockUnits } from "../calc";
-import type { Customer, Sale } from "../types";
+
+import type {
+  Customer,
+  Sale,
+} from "../types";
 
 export type ErpSaleItem = {
   codigo: string;
@@ -14,7 +18,9 @@ export type ErpSaleItem = {
 
 export type ErpSalePayload = {
   action: "registrarVenta";
+
   ventaId: string;
+
   fecha: string;
 
   cliente: {
@@ -26,6 +32,7 @@ export type ErpSalePayload = {
   };
 
   formaPago: string;
+
   observacion: string;
 
   items: ErpSaleItem[];
@@ -33,14 +40,19 @@ export type ErpSalePayload = {
 
 export type ErpCancelPayload = {
   action: "anularVenta";
+
   ventaId: string;
 };
 
 export type ErpWriteResult = {
   ok: boolean;
+
   duplicada?: boolean;
+
   ventaId?: string;
+
   mensaje?: string;
+
   error?: string;
 
   inventarioActualizado?: {
@@ -51,48 +63,94 @@ export type ErpWriteResult = {
   }[];
 };
 
+/**
+ * Construye el payload de una venta para la integración externa.
+ *
+ * Mantiene la estructura utilizada por Apps Script para registrar
+ * la venta, actualizar inventario y guardar movimientos.
+ */
 export function buildErpSalePayload(
   sale: Sale,
   customer?: Customer | null,
 ): ErpSalePayload {
-  const subtotal = sale.lines.reduce(
-    (acc, line) => acc + line.price * line.qty,
-    0,
-  );
-
-  const items: ErpSaleItem[] = sale.lines.map((line) => {
-    const bruto = line.price * line.qty;
-
-    const descuentoLinea =
-      subtotal > 0
-        ? Math.round(
-            (bruto / subtotal) *
-              (sale.discountAmount || 0),
-          )
-        : 0;
-
-    const subtotalLinea = Math.max(
+  const subtotal =
+    sale.lines.reduce(
+      (total, line) =>
+        total +
+        line.price *
+          line.qty,
       0,
-      Math.round(bruto - descuentoLinea),
     );
 
-    return {
-      codigo: line.productId,
-      producto: line.name,
-      formato: line.format,
-      cantidad: line.qty,
-      unidades: lineStockUnits(line),
-      precioUnitario: line.price,
-      descuento: descuentoLinea,
-      subtotal: subtotalLinea,
-    };
-  });
+  const items: ErpSaleItem[] =
+    sale.lines.map(
+      (line) => {
+        const gross =
+          line.price *
+          line.qty;
+
+        const lineDiscount =
+          subtotal > 0
+            ? Math.round(
+                (
+                  gross /
+                  subtotal
+                ) *
+                  (
+                    sale.discountAmount ||
+                    0
+                  ),
+              )
+            : 0;
+
+        const lineSubtotal =
+          Math.max(
+            0,
+            Math.round(
+              gross -
+                lineDiscount,
+            ),
+          );
+
+        return {
+          codigo:
+            line.productId,
+
+          producto:
+            line.name,
+
+          formato:
+            line.format,
+
+          cantidad:
+            line.qty,
+
+          unidades:
+            lineStockUnits(
+              line,
+            ),
+
+          precioUnitario:
+            line.price,
+
+          descuento:
+            lineDiscount,
+
+          subtotal:
+            lineSubtotal,
+        };
+      },
+    );
 
   return {
-    action: "registrarVenta",
+    action:
+      "registrarVenta",
 
-    ventaId: sale.id,
-    fecha: sale.dateISO,
+    ventaId:
+      sale.id,
+
+    fecha:
+      sale.dateISO,
 
     cliente: {
       nombre:
@@ -106,7 +164,8 @@ export function buildErpSalePayload(
         "",
 
       direccion:
-        customer?.address || "",
+        customer?.address ||
+        "",
 
       tipoCliente:
         customer?.priceType ||
@@ -114,21 +173,30 @@ export function buildErpSalePayload(
         "",
 
       observacion:
-        customer?.note || "",
+        customer?.note ||
+        "",
     },
 
-    formaPago: sale.payment || "",
-    observacion: sale.note || "",
+    formaPago:
+      sale.payment || "",
+
+    observacion:
+      sale.note || "",
 
     items,
   };
 }
 
+/**
+ * Construye el payload necesario para anular una venta.
+ */
 export function buildErpCancelPayload(
   ventaId: string,
 ): ErpCancelPayload {
   return {
-    action: "anularVenta",
+    action:
+      "anularVenta",
+
     ventaId,
   };
 }

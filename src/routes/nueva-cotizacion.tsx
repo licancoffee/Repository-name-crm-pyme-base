@@ -61,6 +61,9 @@ import type {
   SaleLine,
 } from "@/lib/crm/types";
 
+import { companyConfig } from "@/lib/config/company";
+import { commercialConfig } from "@/lib/config/commercial";
+
 export const Route = createFileRoute(
   "/nueva-cotizacion",
 )({
@@ -68,12 +71,12 @@ export const Route = createFileRoute(
     meta: [
       {
         title:
-          "Nueva cotización — Lican Coffee CRM",
+          `Nueva cotización — ${companyConfig.name} CRM`,
       },
       {
         name: "description",
         content:
-          "Crear una cotización utilizando productos, precios y stock del ERP Lican Coffee.",
+          `Crear una cotización utilizando productos, precios y disponibilidad de ${companyConfig.name}.`,
       },
     ],
   }),
@@ -123,7 +126,7 @@ function NuevaCotizacion() {
     useState("");
 
   const [priceMode, setPriceMode] =
-    useState<PriceType>("LISTA");
+    useState<PriceType>(commercialConfig.defaultPriceType as PriceType);
 
   const [lines, setLines] =
     useState<SaleLine[]>([]);
@@ -249,10 +252,10 @@ function NuevaCotizacion() {
     setCustomerEmail("");
     setBusinessName("");
 
-    setPriceMode("LISTA");
+    setPriceMode(commercialConfig.defaultPriceType as PriceType);
 
     applyPriceMode(
-      "LISTA",
+      commercialConfig.defaultPriceType as PriceType,
       null,
     );
   }
@@ -331,57 +334,63 @@ function NuevaCotizacion() {
     });
   }
 
-  const volumeProductNames =
-    new Set([
-      "Cappuccino Tradicional",
-      "Cappuccino Vainilla",
-      "Mokachino",
-      "Cappuccino Avellana",
-      "Cappuccino Trufa",
-    ]);
-
+  /**
+   * Aplica las reglas de precio por volumen configuradas para la empresa.
+   * Si no existen reglas activas, conserva los precios calculados normalmente.
+   */
   function applyVolumePrice(
     nextLines: SaleLine[],
-    mode: PriceType =
-      priceMode,
+    mode: PriceType = priceMode,
   ) {
-    if (
-      mode ===
-      "PERSONALIZADO"
-    ) {
+    if (mode === "PERSONALIZADO") {
       return nextLines;
     }
 
-    const cantidadVolumen =
-      nextLines
-        .filter((l) =>
-          volumeProductNames.has(
-            l.name,
-          ),
-        )
-        .reduce(
-          (total, l) =>
-            total + l.qty,
-          0,
+    const activeRules =
+      commercialConfig.volumePricingRules.filter(
+        (rule) => rule.enabled,
+      );
+
+    if (activeRules.length === 0) {
+      return nextLines;
+    }
+
+    let pricedLines = [...nextLines];
+
+    for (const rule of activeRules) {
+      const productNames = new Set(
+        rule.productNames,
+      );
+
+      const combinedQuantity =
+        pricedLines
+          .filter((line) =>
+            productNames.has(line.name),
+          )
+          .reduce(
+            (total, line) =>
+              total + line.qty,
+            0,
+          );
+
+      const targetPrice =
+        combinedQuantity >=
+        rule.minimumCombinedQuantity
+          ? rule.volumePrice
+          : rule.normalPrice;
+
+      pricedLines =
+        pricedLines.map((line) =>
+          productNames.has(line.name)
+            ? {
+                ...line,
+                price: targetPrice,
+              }
+            : line,
         );
+    }
 
-    const precioVolumen =
-      cantidadVolumen >= 4
-        ? 12900
-        : 13500;
-
-    return nextLines.map(
-      (l) =>
-        volumeProductNames.has(
-          l.name,
-        )
-          ? {
-              ...l,
-              price:
-                precioVolumen,
-            }
-          : l,
-    );
+    return pricedLines;
   }
 
   function usedUnits(
@@ -956,7 +965,7 @@ function NuevaCotizacion() {
     };
 
     sessionStorage.setItem(
-      "lican:quote-to-sale",
+      "crm:quote-to-sale",
       JSON.stringify(draft),
     );
 
@@ -1224,7 +1233,7 @@ function NuevaCotizacion() {
                 e.target.value,
               )
             }
-            placeholder="Buscar producto del ERP..."
+            placeholder="Buscar producto..."
             className="h-12 pl-9"
           />
         </div>
@@ -1840,9 +1849,10 @@ function NuevaCotizacion() {
             )}
 
             <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-              Al enviar, se generará el PDF con el formato de Lican Coffee,
-              se guardará en Drive y se enviará automáticamente al correo
-              del cliente. La cotización no descuenta stock.
+              Al enviar, se generará el PDF con el formato de{" "}
+              {companyConfig.name}, se guardará en Drive y se enviará
+              automáticamente al correo del cliente. La cotización no
+              descuenta stock.
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 export type WhatsAppSessionStep =
   | "idle"
-  | "waiting_cappuccino_variant"
+  | "waiting_product_variant"
   | "waiting_quantities"
   | "waiting_customer_name"
   | "waiting_location"
@@ -53,20 +53,24 @@ function createEmptySession(
 
 function getConfig() {
   const url =
-    process.env["ERP_APPS_SCRIPT_URL"];
+    process.env[
+      "ERP_APPS_SCRIPT_URL"
+    ];
 
   const token =
-    process.env["CRM_API_TOKEN"];
+    process.env[
+      "CRM_API_TOKEN"
+    ];
 
   if (!url) {
     throw new Error(
-      "Falta ERP_APPS_SCRIPT_URL",
+      "Falta configurar ERP_APPS_SCRIPT_URL.",
     );
   }
 
   if (!token) {
     throw new Error(
-      "Falta CRM_API_TOKEN",
+      "Falta configurar CRM_API_TOKEN.",
     );
   }
 
@@ -77,25 +81,36 @@ function getConfig() {
 }
 
 async function callAppsScript<T>(
-  payload: Record<string, unknown>,
+  payload: Record<
+    string,
+    unknown
+  >,
 ): Promise<AppsScriptResult<T>> {
   try {
-    const { url, token } =
-      getConfig();
+    const {
+      url,
+      token,
+    } = getConfig();
 
     const response =
-      await fetch(url, {
-        method: "POST",
-        redirect: "follow",
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8",
+      await fetch(
+        url,
+        {
+          method: "POST",
+          redirect: "follow",
+
+          headers: {
+            "Content-Type":
+              "text/plain;charset=utf-8",
+          },
+
+          body:
+            JSON.stringify({
+              ...payload,
+              token,
+            }),
         },
-        body: JSON.stringify({
-          ...payload,
-          token,
-        }),
-      });
+      );
 
     const text =
       await response.text();
@@ -115,14 +130,16 @@ async function callAppsScript<T>(
     }
 
     const parsed =
-      JSON.parse(text);
+      JSON.parse(
+        text,
+      );
 
     if (
       !parsed ||
       parsed.ok !== true
     ) {
       console.error(
-        "[WHATSAPP SESSION APPS SCRIPT ERROR]",
+        "[WHATSAPP SESSION BACKEND ERROR]",
         parsed,
       );
 
@@ -130,13 +147,14 @@ async function callAppsScript<T>(
         ok: false,
         error:
           parsed?.error ||
-          "Apps Script rechazó la operación",
+          "El backend rechazó la operación.",
       };
     }
 
     return {
       ok: true,
-      data: parsed.data as T,
+      data:
+        parsed.data as T,
     };
   } catch (error) {
     console.error(
@@ -171,10 +189,13 @@ export async function getWhatsAppSession(
   }
 
   return {
-    ...createEmptySession(phone),
+    ...createEmptySession(
+      phone,
+    ),
     ...result.data,
     email:
-      result.data?.email ?? "",
+      result.data?.email ??
+      "",
   };
 }
 
@@ -218,7 +239,7 @@ export async function resetWhatsAppSession(
   return result.data;
 }
 
-export async function setWaitingCappuccinoVariant(
+export async function setWaitingProductVariant(
   phone: string,
 ): Promise<WhatsAppSession> {
   return updateWhatsAppSession(
@@ -231,7 +252,7 @@ export async function setWaitingCappuccinoVariant(
       location: "",
       action: "",
       step:
-        "waiting_cappuccino_variant",
+        "waiting_product_variant",
     },
   );
 }
@@ -257,7 +278,10 @@ export async function setSessionProducts(
 
 export async function setSessionQuantities(
   phone: string,
-  quantities: Record<string, number>,
+  quantities: Record<
+    string,
+    number
+  >,
 ): Promise<WhatsAppSession> {
   return updateWhatsAppSession(
     phone,
@@ -327,8 +351,10 @@ export async function setSessionWaitingEmail(
   return updateWhatsAppSession(
     phone,
     {
-      action: "cotizacion",
-      step: "waiting_email",
+      action:
+        "cotizacion",
+      step:
+        "waiting_email",
     },
   );
 }
@@ -340,8 +366,10 @@ export async function setSessionEmail(
   return updateWhatsAppSession(
     phone,
     {
-      email: email.trim(),
-      step: "waiting_email",
+      email:
+        email.trim(),
+      step:
+        "waiting_email",
     },
   );
 }
@@ -350,10 +378,12 @@ export function sessionIsComplete(
   session: WhatsAppSession,
 ): boolean {
   return (
-    session.products.length > 0 &&
+    session.products.length >
+      0 &&
     Object.keys(
       session.quantities,
-    ).length > 0 &&
+    ).length >
+      0 &&
     Boolean(
       session.customerName,
     ) &&
@@ -367,9 +397,15 @@ export function quoteSessionIsComplete(
   session: WhatsAppSession,
 ): boolean {
   return (
-    sessionIsComplete(session) &&
-    Boolean(session.email) &&
-    session.email.includes("@")
+    sessionIsComplete(
+      session,
+    ) &&
+    Boolean(
+      session.email,
+    ) &&
+    session.email.includes(
+      "@",
+    )
   );
 }
 
@@ -378,15 +414,19 @@ export function buildSessionSummary(
 ): string {
   const productLines =
     session.products
-      .map((product) => {
-        const quantity =
-          session.quantities[
-            product
-          ] ?? 0;
+      .map(
+        (product) => {
+          const quantity =
+            session.quantities[
+              product
+            ] ?? 0;
 
-        return `• ${product}: ${quantity}`;
-      })
-      .join("\n");
+          return `• ${product}: ${quantity}`;
+        },
+      )
+      .join(
+        "\n",
+      );
 
   return (
     "Perfecto 😊 Este es el resumen:\n\n" +

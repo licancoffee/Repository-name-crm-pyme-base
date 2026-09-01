@@ -18,6 +18,13 @@ import { Route as InventarioRouteImport } from './routes/inventario'
 import { Route as KaizenRouteImport } from './routes/kaizen'
 import { Route as NuevaCotizacionRouteImport } from './routes/nueva-cotizacion'
 import { Route as NuevaVentaRouteImport } from './routes/nueva-venta'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SetupClientesRouteImport } from './routes/setup-clientes'
+import { Route as SetupProductosRouteImport } from './routes/setup-productos'
+import { Route as ApiClientConfigRouteImport } from './routes/api/client-config'
+import { Route as ApiSetupRouteImport } from './routes/api/setup'
+import { Route as ApiSetupCustomersRouteImport } from './routes/api/setup-customers'
+import { Route as ApiSetupProductsRouteImport } from './routes/api/setup-products'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +72,41 @@ const NuevaVentaRoute = NuevaVentaRouteImport.update({
   path: '/nueva-venta',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupClientesRoute = SetupClientesRouteImport.update({
+  id: '/setup-clientes',
+  path: '/setup-clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupProductosRoute = SetupProductosRouteImport.update({
+  id: '/setup-productos',
+  path: '/setup-productos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClientConfigRoute = ApiClientConfigRouteImport.update({
+  id: '/api/client-config',
+  path: '/api/client-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupRoute = ApiSetupRouteImport.update({
+  id: '/api/setup',
+  path: '/api/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupCustomersRoute = ApiSetupCustomersRouteImport.update({
+  id: '/api/setup-customers',
+  path: '/api/setup-customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupProductsRoute = ApiSetupProductsRouteImport.update({
+  id: '/api/setup-products',
+  path: '/api/setup-products',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
   id: '/api/whatsapp/webhook',
   path: '/api/whatsapp/webhook',
@@ -81,6 +123,13 @@ export interface FileRoutesByFullPath {
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
+  '/setup': typeof SetupRoute
+  '/setup-clientes': typeof SetupClientesRoute
+  '/setup-productos': typeof SetupProductosRoute
+  '/api/client-config': typeof ApiClientConfigRoute
+  '/api/setup': typeof ApiSetupRoute
+  '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +142,13 @@ export interface FileRoutesByTo {
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
+  '/setup': typeof SetupRoute
+  '/setup-clientes': typeof SetupClientesRoute
+  '/setup-productos': typeof SetupProductosRoute
+  '/api/client-config': typeof ApiClientConfigRoute
+  '/api/setup': typeof ApiSetupRoute
+  '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
 export interface FileRoutesById {
@@ -106,6 +162,13 @@ export interface FileRoutesById {
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
+  '/setup': typeof SetupRoute
+  '/setup-clientes': typeof SetupClientesRoute
+  '/setup-productos': typeof SetupProductosRoute
+  '/api/client-config': typeof ApiClientConfigRoute
+  '/api/setup': typeof ApiSetupRoute
+  '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +183,13 @@ export interface FileRouteTypes {
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
+    | '/setup'
+    | '/setup-clientes'
+    | '/setup-productos'
+    | '/api/client-config'
+    | '/api/setup'
+    | '/api/setup-customers'
+    | '/api/setup-products'
     | '/api/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +202,13 @@ export interface FileRouteTypes {
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
+    | '/setup'
+    | '/setup-clientes'
+    | '/setup-productos'
+    | '/api/client-config'
+    | '/api/setup'
+    | '/api/setup-customers'
+    | '/api/setup-products'
     | '/api/whatsapp/webhook'
   id:
     | '__root__'
@@ -144,6 +221,13 @@ export interface FileRouteTypes {
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
+    | '/setup'
+    | '/setup-clientes'
+    | '/setup-productos'
+    | '/api/client-config'
+    | '/api/setup'
+    | '/api/setup-customers'
+    | '/api/setup-products'
     | '/api/whatsapp/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +241,13 @@ export interface RootRouteChildren {
   KaizenRoute: typeof KaizenRoute
   NuevaCotizacionRoute: typeof NuevaCotizacionRoute
   NuevaVentaRoute: typeof NuevaVentaRoute
+  SetupRoute: typeof SetupRoute
+  SetupClientesRoute: typeof SetupClientesRoute
+  SetupProductosRoute: typeof SetupProductosRoute
+  ApiClientConfigRoute: typeof ApiClientConfigRoute
+  ApiSetupRoute: typeof ApiSetupRoute
+  ApiSetupCustomersRoute: typeof ApiSetupCustomersRoute
+  ApiSetupProductsRoute: typeof ApiSetupProductsRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
 }
 
@@ -225,6 +316,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NuevaVentaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup-clientes': {
+      id: '/setup-clientes'
+      path: '/setup-clientes'
+      fullPath: '/setup-clientes'
+      preLoaderRoute: typeof SetupClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup-productos': {
+      id: '/setup-productos'
+      path: '/setup-productos'
+      fullPath: '/setup-productos'
+      preLoaderRoute: typeof SetupProductosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/client-config': {
+      id: '/api/client-config'
+      path: '/api/client-config'
+      fullPath: '/api/client-config'
+      preLoaderRoute: typeof ApiClientConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup': {
+      id: '/api/setup'
+      path: '/api/setup'
+      fullPath: '/api/setup'
+      preLoaderRoute: typeof ApiSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup-customers': {
+      id: '/api/setup-customers'
+      path: '/api/setup-customers'
+      fullPath: '/api/setup-customers'
+      preLoaderRoute: typeof ApiSetupCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup-products': {
+      id: '/api/setup-products'
+      path: '/api/setup-products'
+      fullPath: '/api/setup-products'
+      preLoaderRoute: typeof ApiSetupProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/whatsapp/webhook': {
       id: '/api/whatsapp/webhook'
       path: '/api/whatsapp/webhook'
@@ -245,6 +385,13 @@ const rootRouteChildren: RootRouteChildren = {
   KaizenRoute: KaizenRoute,
   NuevaCotizacionRoute: NuevaCotizacionRoute,
   NuevaVentaRoute: NuevaVentaRoute,
+  SetupRoute: SetupRoute,
+  SetupClientesRoute: SetupClientesRoute,
+  SetupProductosRoute: SetupProductosRoute,
+  ApiClientConfigRoute: ApiClientConfigRoute,
+  ApiSetupRoute: ApiSetupRoute,
+  ApiSetupCustomersRoute: ApiSetupCustomersRoute,
+  ApiSetupProductsRoute: ApiSetupProductsRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport

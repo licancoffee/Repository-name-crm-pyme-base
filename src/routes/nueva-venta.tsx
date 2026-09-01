@@ -55,16 +55,19 @@ import type {
   SaleLine,
 } from "@/lib/crm/types";
 
+import { companyConfig } from "@/lib/config/company";
+import { commercialConfig } from "@/lib/config/commercial";
+
 export const Route = createFileRoute("/nueva-venta")({
   head: () => ({
     meta: [
-      { title: "Nueva venta — Lican Coffee CRM" },
+      { title: `Nueva venta — ${companyConfig.name} CRM` },
       {
         name: "description",
         content:
-          "Crear una venta de Lican Coffee: cliente, productos, formatos, precios, control de stock y comprobante por WhatsApp.",
+          `Crear una venta de ${companyConfig.name}: cliente, productos, formatos, precios, control de stock y comprobante por WhatsApp.`,
       },
-      { property: "og:title", content: "Nueva venta — Lican Coffee CRM" },
+      { property: "og:title", content: `Nueva venta — ${companyConfig.name} CRM` },
       { property: "og:description", content: "Registra una venta en segundos." },
     ],
   }),
@@ -109,10 +112,10 @@ function NuevaVenta() {
     phone: "",
     address: "",
     note: "",
-    priceType: "LISTA" as PriceType,
+    priceType: commercialConfig.defaultPriceType as PriceType,
   });
 
-  const [priceMode, setPriceMode] = useState<PriceType>("LISTA");
+  const [priceMode, setPriceMode] = useState<PriceType>(commercialConfig.defaultPriceType as PriceType);
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [productQuery, setProductQuery] = useState("");
   const [discountType, setDiscountType] = useState<"monto" | "porcentaje">("monto");
@@ -148,7 +151,7 @@ function NuevaVenta() {
 
     const raw =
       sessionStorage.getItem(
-        "lican:quote-to-sale",
+        "crm:quote-to-sale",
       );
 
     if (!raw) {
@@ -347,7 +350,7 @@ function NuevaVenta() {
       );
 
       sessionStorage.removeItem(
-        "lican:quote-to-sale",
+        "crm:quote-to-sale",
       );
 
       toast.success(
@@ -357,7 +360,7 @@ function NuevaVenta() {
       );
     } catch (error) {
       sessionStorage.removeItem(
-        "lican:quote-to-sale",
+        "crm:quote-to-sale",
       );
 
       toast.error(
@@ -432,37 +435,63 @@ function NuevaVenta() {
 
   const stockOf = (id: string) => db.products.find((p) => p.id === id)?.stock ?? 0;
 
-  const volumeProductNames = new Set([
-    "Cappuccino Tradicional",
-    "Cappuccino Vainilla",
-    "Mokachino",
-    "Cappuccino Avellana",
-    "Cappuccino Trufa",
-  ]);
-
   /**
-   * Regla comercial:
-   * - 1 a 3 unidades combinadas de la familia volumen: $13.500 c/u
-   * - 4 o más unidades combinadas: $12.900 c/u
-   * - PERSONALIZADO conserva los precios manuales/del cliente.
+   * Aplica las reglas de precio por volumen configuradas para la empresa.
+   * Si no existen reglas activas, conserva los precios calculados normalmente.
    */
   function applyVolumePrice(
     nextLines: SaleLine[],
     mode: PriceType = priceMode,
   ) {
-    if (mode === "PERSONALIZADO") return nextLines;
+    if (mode === "PERSONALIZADO") {
+      return nextLines;
+    }
 
-    const cantidadVolumen = nextLines
-      .filter((l) => volumeProductNames.has(l.name))
-      .reduce((total, l) => total + l.qty, 0);
+    const activeRules =
+      commercialConfig.volumePricingRules.filter(
+        (rule) => rule.enabled,
+      );
 
-    const precioVolumen = cantidadVolumen >= 4 ? 12900 : 13500;
+    if (activeRules.length === 0) {
+      return nextLines;
+    }
 
-    return nextLines.map((l) =>
-      volumeProductNames.has(l.name)
-        ? { ...l, price: precioVolumen }
-        : l,
-    );
+    let pricedLines = [...nextLines];
+
+    for (const rule of activeRules) {
+      const productNames = new Set(
+        rule.productNames,
+      );
+
+      const combinedQuantity =
+        pricedLines
+          .filter((line) =>
+            productNames.has(line.name),
+          )
+          .reduce(
+            (total, line) =>
+              total + line.qty,
+            0,
+          );
+
+      const targetPrice =
+        combinedQuantity >=
+        rule.minimumCombinedQuantity
+          ? rule.volumePrice
+          : rule.normalPrice;
+
+      pricedLines =
+        pricedLines.map((line) =>
+          productNames.has(line.name)
+            ? {
+                ...line,
+                price: targetPrice,
+              }
+            : line,
+        );
+    }
+
+    return pricedLines;
   }
 
   function addProduct(p: Product) {
@@ -652,7 +681,13 @@ function NuevaVenta() {
     });
     selectCustomer(created);
     setShowNew(false);
-    setNewC({ name: "", phone: "", address: "", note: "", priceType: "LISTA" });
+    setNewC({
+      name: "",
+      phone: "",
+      address: "",
+      note: "",
+      priceType: commercialConfig.defaultPriceType as PriceType,
+    });
     toast.success("Cliente creado");
   }
 
@@ -696,7 +731,7 @@ function NuevaVenta() {
       const now = new Date();
 
       const ventaId =
-        `LC-${now.getFullYear()}` +
+        `${commercialConfig.saleIdPrefix}-${now.getFullYear()}` +
         `${String(now.getMonth() + 1).padStart(2, "0")}` +
         `${String(now.getDate()).padStart(2, "0")}-` +
         `${now.getTime()}`;
@@ -740,7 +775,7 @@ function NuevaVenta() {
       if (!result.ok) {
         throw new Error(
           result.error ||
-            "No fue posible conectar con el ERP. La venta no fue registrada.",
+            "No fue posible conectar con el sistema. La venta no fue registrada.",
         );
       }
 
@@ -783,7 +818,7 @@ function NuevaVenta() {
             ? "La venta ya estaba registrada. No se duplicó."
             : sourceQuoteNumber
               ? `Venta ${ventaId} registrada. Cotización ${sourceQuoteNumber} convertida en venta.`
-              : `Venta ${ventaId} registrada en ERP`,
+              : `Venta ${ventaId} registrada correctamente`,
         );
       }
 
@@ -792,7 +827,7 @@ function NuevaVenta() {
       const message =
         err instanceof Error
           ? err.message
-          : "No fue posible registrar la venta en el ERP.";
+          : "No fue posible registrar la venta.";
 
       toast.error(message);
     } finally {

@@ -1,3 +1,7 @@
+import {
+  clientConfig,
+} from "../config/client";
+
 export type WhatsAppIntent =
   | "saludo"
   | "agradecimiento"
@@ -41,30 +45,27 @@ function includesAny(
 ): boolean {
   return words.some(
     (word) =>
-      text.includes(word),
+      text.includes(
+        word,
+      ),
   );
 }
 
 /*********************************************************
  * DETECCIÓN DE INTENCIÓN
  *
- * Este archivo NO conoce productos.
- * El catálogo real se resuelve en
- * conversation.ts + catalog.ts.
+ * Este archivo no conoce productos específicos.
+ * El catálogo se resuelve en conversation.ts
+ * y catalog.ts.
  *********************************************************/
 
 export function detectWhatsAppIntent(
   rawText: string,
 ): WhatsAppIntent {
-
   const text =
     normalizeText(
       rawText,
     );
-
-  /*******************************************************
-   * CIERRE NATURAL
-   *******************************************************/
 
   if (
     includesAny(
@@ -86,10 +87,6 @@ export function detectWhatsAppIntent(
   ) {
     return "agradecimiento";
   }
-
-  /*******************************************************
-   * COTIZACIÓN / COMPRA
-   *******************************************************/
 
   if (
     includesAny(
@@ -113,10 +110,6 @@ export function detectWhatsAppIntent(
     return "cotizacion";
   }
 
-  /*******************************************************
-   * PRECIOS
-   *******************************************************/
-
   if (
     includesAny(
       text,
@@ -138,10 +131,6 @@ export function detectWhatsAppIntent(
     return "precio";
   }
 
-  /*******************************************************
-   * CATÁLOGO / PRODUCTOS
-   *******************************************************/
-
   if (
     includesAny(
       text,
@@ -160,10 +149,6 @@ export function detectWhatsAppIntent(
   ) {
     return "productos";
   }
-
-  /*******************************************************
-   * DESPACHO
-   *******************************************************/
 
   if (
     includesAny(
@@ -184,10 +169,6 @@ export function detectWhatsAppIntent(
     return "despacho";
   }
 
-  /*******************************************************
-   * PAGO
-   *******************************************************/
-
   if (
     includesAny(
       text,
@@ -206,28 +187,23 @@ export function detectWhatsAppIntent(
     return "pago";
   }
 
-  /*******************************************************
-   * UBICACIÓN
-   *******************************************************/
-
   if (
     includesAny(
       text,
       [
         "ubicacion",
+        "ubicación",
         "donde estan",
+        "donde están",
         "direccion",
-        "lican ray",
-        "licanray",
+        "dirección",
+        "donde se encuentran",
+        "donde quedan",
       ],
     )
   ) {
     return "ubicacion";
   }
-
-  /*******************************************************
-   * ATENCIÓN HUMANA
-   *******************************************************/
 
   if (
     includesAny(
@@ -246,10 +222,6 @@ export function detectWhatsAppIntent(
   ) {
     return "humano";
   }
-
-  /*******************************************************
-   * SALUDO
-   *******************************************************/
 
   if (
     includesAny(
@@ -273,21 +245,174 @@ export function detectWhatsAppIntent(
 }
 
 /*********************************************************
+ * RESPUESTAS CONFIGURABLES
+ *********************************************************/
+
+function buildLocationResponse():
+string {
+  const {
+    company,
+    shipping,
+  } = clientConfig;
+
+  const address =
+    company.address?.trim();
+
+  const city =
+    company.city?.trim();
+
+  if (
+    address &&
+    city
+  ) {
+    return (
+      `Estamos ubicados en ${address}, ${city} 📍` +
+      (
+        shipping.enabled
+          ? " Si necesitas despacho, indícame tu localidad y revisamos las opciones disponibles."
+          : ""
+      )
+    );
+  }
+
+  if (city) {
+    return (
+      `Estamos en ${city} 📍` +
+      (
+        shipping.enabled
+          ? " Si necesitas despacho, indícame tu localidad y revisamos las opciones disponibles."
+          : ""
+      )
+    );
+  }
+
+  return shipping.enabled
+    ? "Claro 😊 Si necesitas conocer nuestra ubicación o coordinar una entrega, indícame tu localidad y te orientamos."
+    : "Claro 😊 Puedo ayudarte con información de contacto y ubicación de la empresa.";
+}
+
+function buildShippingResponse():
+string {
+  const {
+    shipping,
+  } = clientConfig;
+
+  if (!shipping.enabled) {
+    return (
+      "Por ahora esta instalación no tiene habilitado el módulo de despacho."
+    );
+  }
+
+  if (
+    shipping.instructions.trim()
+  ) {
+    return shipping.instructions.trim();
+  }
+
+  return (
+    "Claro 🚚 Dime en qué localidad estás y revisamos las opciones de entrega disponibles."
+  );
+}
+
+function buildPaymentResponse():
+string {
+  const {
+    payments,
+  } = clientConfig;
+
+  if (!payments.enabled) {
+    return (
+      "Por ahora esta instalación no tiene habilitado el módulo de pagos."
+    );
+  }
+
+  if (
+    payments.instructions.trim()
+  ) {
+    return payments.instructions.trim();
+  }
+
+  if (
+    payments.methods.length >
+    0
+  ) {
+    const methods =
+      payments.methods
+        .map(
+          (method) =>
+            method
+              .toLowerCase()
+              .replace(
+                /_/g,
+                " ",
+              ),
+        )
+        .join(", ");
+
+    return (
+      `Claro 👍 Las formas de pago habilitadas son: ${methods}.`
+    );
+  }
+
+  return (
+    "Claro 👍 Las condiciones de pago pueden depender de cada pedido. Dime qué necesitas comprar y te orientamos."
+  );
+}
+
+function buildHumanResponse():
+string {
+  const {
+    company,
+    whatsapp,
+  } = clientConfig;
+
+  if (
+    !whatsapp
+      .humanHandoffEnabled
+  ) {
+    return (
+      "Puedo seguir ayudándote por este mismo canal con productos, precios, disponibilidad y cotizaciones."
+    );
+  }
+
+  return (
+    `Por supuesto 😊 Déjame aquí lo que necesitas y una persona de ${company.name} podrá continuar contigo.`
+  );
+}
+
+/*********************************************************
  * RESPUESTAS GENERALES
  *
- * Solo se usan cuando conversation.ts
- * no resolvió el mensaje.
+ * Solo se utilizan cuando conversation.ts
+ * no pudo resolver el mensaje directamente.
  *********************************************************/
 
 export function buildWhatsAppResponse(
   intent: WhatsAppIntent,
 ): string {
+  const {
+    company,
+    modules,
+    whatsapp,
+  } = clientConfig;
+
+  if (
+    !modules.whatsapp ||
+    !whatsapp.enabled
+  ) {
+    return (
+      "El canal automático de WhatsApp no está habilitado para esta instalación."
+    );
+  }
+
+  const assistantName =
+    whatsapp.assistantName ||
+    "Asistente virtual";
 
   switch (intent) {
-
     case "saludo":
       return (
-        "¡Hola! 👋 Soy Kaizen de Lican Coffee ☕ " +
+        `¡Hola! 👋 Soy ${assistantName}, asistente virtual de ${company.name}. ` +
         "Puedo ayudarte con productos, precios, disponibilidad y cotizaciones. ¿Qué necesitas?"
       );
 
@@ -297,49 +422,40 @@ export function buildWhatsAppResponse(
       );
 
     case "productos":
-      /*
-       * Normalmente esta intención
-       * será resuelta antes por
-       * conversation.ts consultando ERP.
-       */
       return (
-        "Claro 😊 Puedo revisar nuestro catálogo actualizado. Dime qué producto buscas."
+        "Claro 😊 Puedo revisar nuestro catálogo actualizado. Dime qué producto o categoría buscas."
       );
 
     case "precio":
-      /*
-       * conversation.ts intenta resolver
-       * producto + precio real antes
-       * de llegar hasta aquí.
-       */
       return (
         "Claro 👍 Dime qué producto necesitas y revisaré su precio y disponibilidad."
       );
 
     case "cotizacion":
+      if (
+        !whatsapp
+          .quoteFlowEnabled
+      ) {
+        return (
+          "La generación automática de cotizaciones por WhatsApp no está habilitada para esta instalación."
+        );
+      }
+
       return (
         "Claro 😊 Dime qué producto necesitas y comenzamos tu cotización."
       );
 
     case "despacho":
-      return (
-        "Sí, coordinamos entregas 🚚 Dime en qué localidad estás y revisamos la mejor opción."
-      );
+      return buildShippingResponse();
 
     case "pago":
-      return (
-        "Claro 👍 Las condiciones de pago pueden depender del pedido. Dime qué necesitas comprar y te orientamos."
-      );
+      return buildPaymentResponse();
 
     case "ubicacion":
-      return (
-        "Estamos en Lican Ray 📍 y trabajamos principalmente en la zona lacustre. ¿Desde qué localidad nos escribes?"
-      );
+      return buildLocationResponse();
 
     case "humano":
-      return (
-        "Por supuesto 😊 Déjame aquí lo que necesitas y una persona de Lican Coffee podrá continuar contigo."
-      );
+      return buildHumanResponse();
 
     default:
       return (

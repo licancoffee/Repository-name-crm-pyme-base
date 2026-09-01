@@ -6,92 +6,133 @@ import type {
 } from "./payload";
 
 /**
- * Registra una venta en el ERP real.
+ * Registra una venta en el backend de integración.
  */
 export const registrarVentaErp = createServerFn({
   method: "POST",
 })
-  .validator((data: ErpSalePayload) => data)
-  .handler(async ({ data }): Promise<ErpWriteResult> => {
-    console.log("[VENTA ERP] Handler iniciado");
-    console.log("[VENTA ERP] Venta ID:", data.ventaId);
-
-    try {
-      const { registrarVentaEnErp } = await import(
-        "./appsScript.server"
+  .validator(
+    (data: ErpSalePayload) =>
+      data,
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ErpWriteResult> => {
+      console.log(
+        "[VENTA] Handler iniciado",
       );
 
       console.log(
-        "[VENTA ERP] appsScript.server cargado correctamente",
+        "[VENTA] Venta ID:",
+        data.ventaId,
       );
 
-      const result = await registrarVentaEnErp(data);
+      try {
+        const {
+          registrarVentaEnErp,
+        } = await import(
+          "./appsScript.server"
+        );
 
-      console.log(
-        "[VENTA ERP] Resultado:",
-        JSON.stringify(result),
-      );
+        console.log(
+          "[VENTA] Backend de integración cargado correctamente",
+        );
 
-      return result;
-    } catch (error) {
-      console.error(
-        "[VENTA ERP] Error interno:",
-        error,
-      );
+        const result =
+          await registrarVentaEnErp(
+            data,
+          );
 
-      return {
-        ok: false,
-        error: "ERROR_SERVER_FN",
-        mensaje:
-          error instanceof Error
-            ? error.message
-            : "Error interno al registrar la venta.",
-      };
-    }
-  });
+        console.log(
+          "[VENTA] Resultado:",
+          JSON.stringify(
+            result,
+          ),
+        );
+
+        return result;
+      } catch (error) {
+        console.error(
+          "[VENTA] Error interno:",
+          error,
+        );
+
+        return {
+          ok: false,
+
+          error:
+            "ERROR_SERVER_FN",
+
+          mensaje:
+            error instanceof Error
+              ? error.message
+              : "Error interno al registrar la venta.",
+        };
+      }
+    },
+  );
 
 /**
- * Anula una venta en el ERP y devuelve el stock.
+ * Anula una venta y devuelve el stock correspondiente.
  */
 export const anularVentaErp = createServerFn({
   method: "POST",
 })
-  .validator((data: { ventaId: string }) => data)
-  .handler(async ({ data }): Promise<ErpWriteResult> => {
-    console.log(
-      "[ANULAR ERP] Handler iniciado:",
-      data.ventaId,
-    );
-
-    try {
-      const { anularVentaEnErp } = await import(
-        "./appsScript.server"
-      );
-
-      const result = await anularVentaEnErp(
+  .validator(
+    (
+      data: {
+        ventaId: string;
+      },
+    ) => data,
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ErpWriteResult> => {
+      console.log(
+        "[ANULAR VENTA] Handler iniciado:",
         data.ventaId,
       );
 
-      console.log(
-        "[ANULAR ERP] Resultado:",
-        JSON.stringify(result),
-      );
+      try {
+        const {
+          anularVentaEnErp,
+        } = await import(
+          "./appsScript.server"
+        );
 
-      return result;
-    } catch (error) {
-      console.error(
-        "[ANULAR ERP] Error interno:",
-        error,
-      );
+        const result =
+          await anularVentaEnErp(
+            data.ventaId,
+          );
 
-      return {
-        ok: false,
-        error: "ERROR_SERVER_FN",
-        mensaje:
-          error instanceof Error
-            ? error.message
-            : "Error interno al anular la venta.",
-      };
-    }
-  });
+        console.log(
+          "[ANULAR VENTA] Resultado:",
+          JSON.stringify(
+            result,
+          ),
+        );
+
+        return result;
+      } catch (error) {
+        console.error(
+          "[ANULAR VENTA] Error interno:",
+          error,
+        );
+
+        return {
+          ok: false,
+
+          error:
+            "ERROR_SERVER_FN",
+
+          mensaje:
+            error instanceof Error
+              ? error.message
+              : "Error interno al anular la venta.",
+        };
+      }
+    },
+  );
   

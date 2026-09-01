@@ -2,6 +2,8 @@ import {
   readErpSnapshot,
 } from "../crm/erp/sheets.server";
 
+import { companyConfig } from "../config/company";
+
 import type {
   Product,
   ProductFormat,
@@ -66,119 +68,50 @@ export function normalizeCatalogText(
 /*********************************************************
  * ALIAS DE PRODUCTOS
  *
- * Importante:
- * NO usamos "café en grano" ni "café molido" como alias
- * de un producto individual porque existen varias
- * variedades y no debemos elegir una al azar.
+ * Extensión opcional por instalación.
+ * El catálogo funciona sin alias. Si una empresa necesita
+ * sinónimos o nombres alternativos, pueden agregarse aquí
+ * o moverse posteriormente a una configuración central.
  *********************************************************/
 
 const aliases: Record<
   string,
   string[]
-> = {
-  "cappuccino tradicional": [
-    "cappuccino tradicional",
-    "capuccino tradicional",
-    "cappucino tradicional",
-  ],
-
-  "cappuccino vainilla": [
-    "cappuccino vainilla",
-    "capuccino vainilla",
-    "cappucino vainilla",
-  ],
-
-  "cappuccino avellana": [
-    "cappuccino avellana",
-    "capuccino avellana",
-    "cappucino avellana",
-  ],
-
-  "cappuccino trufa": [
-    "cappuccino trufa",
-    "capuccino trufa",
-    "cappucino trufa",
-  ],
-
-  mokaccino: [
-    "mokaccino",
-    "mokachino",
-    "mocaccino",
-    "mocachino",
-  ],
-
-  chocolate: [
-    "chocolate",
-  ],
-
-  "te chai": [
-    "te chai",
-    "chai",
-  ],
-
-  "crema de leche": [
-    "crema de leche",
-    "crema leche",
-    "crema sabor leche",
-  ],
-};
+> = {};
 
 /*********************************************************
  * CATEGORÍAS
  *********************************************************/
 
-const categoryQueries: Array<{
-  label: string;
-  phrases: string[];
-  searchTerms: string[];
-}> = [
-  {
-    label: "cafés",
-    phrases: [
-      "cafe",
-      "cafes",
-      "que cafe tienen",
-      "que cafes tienen",
-      "que cafe venden",
-      "que cafes venden",
-    ],
-    searchTerms: [
-      "cafe",
-    ],
-  },
+function categoryLabel(
+  value: string,
+): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  {
-    label: "cappuccinos",
-    phrases: [
-      "cappuccino",
-      "cappuccinos",
-      "capuccino",
-      "capuccinos",
-      "que cappuccino tienen",
-      "que cappuccinos tienen",
-      "que capuccino tienen",
-      "que capuccinos tienen",
-    ],
-    searchTerms: [
-      "cappuccino",
-      "capuccino",
-      "cappucino",
-    ],
-  },
+function categorySearchTerms(
+  value: string,
+): string[] {
+  const normalized =
+    normalizeCatalogText(value);
 
-  {
-    label: "mezclas",
-    phrases: [
-      "mezcla",
-      "mezclas",
-      "que mezclas tienen",
-      "que mezclas venden",
-    ],
-    searchTerms: [
-      "mezcla",
-    ],
-  },
-];
+  if (!normalized) {
+    return [];
+  }
+
+  const singular =
+    normalized.endsWith("s")
+      ? normalized.slice(0, -1)
+      : normalized;
+
+  return [
+    normalized,
+    singular,
+  ].filter(Boolean);
+}
 
 /*********************************************************
  * CATÁLOGO
@@ -417,20 +350,20 @@ export function buildCoffeeOptionsReply(
   }
 
   let heading =
-    "Claro 😊 Tenemos estas variedades de café:";
+    "Claro 😊 Tenemos estas opciones disponibles:";
 
   if (
     presentation === "grano"
   ) {
     heading =
-      "Claro 😊 Tenemos estas opciones de café en grano:";
+      "Claro 😊 Tenemos estas opciones en grano:";
   }
 
   if (
     presentation === "molido"
   ) {
     heading =
-      "Claro 😊 Tenemos estas opciones de café molido:";
+      "Claro 😊 Tenemos estas opciones molidas:";
   }
 
   const lines: string[] = [
@@ -449,7 +382,7 @@ export function buildCoffeeOptionsReply(
 
   lines.push(
     "",
-    "Dime cuál te interesa y te indico los formatos y precios ☕",
+    "Dime cuál te interesa y te indico los formatos y precios 😊",
   );
 
   return lines.join("\n");
@@ -527,10 +460,10 @@ function findAliasProduct(
 
     const product =
       products.find(
-        (erpProduct) => {
+        (catalogProduct) => {
           const normalizedName =
             normalizeCatalogText(
-              erpProduct.name,
+              catalogProduct.name,
             );
 
           return normalizedAliases.some(
@@ -674,6 +607,7 @@ export async function findWhatsAppProduct(
 
 function detectCategoryQuery(
   query: string,
+  products: Product[],
 ): {
   label: string;
   searchTerms: string[];
@@ -683,34 +617,41 @@ function detectCategoryQuery(
       query,
     );
 
+  const categories = [
+    ...new Set(
+      products
+        .map(
+          (product) =>
+            categoryLabel(
+              product.category || "",
+            ),
+        )
+        .filter(Boolean),
+    ),
+  ];
+
   for (
     const category
-    of categoryQueries
+    of categories
   ) {
-    const detected =
-      category.phrases.some(
-        (phrase) => {
-          const normalizedPhrase =
-            normalizeCatalogText(
-              phrase,
-            );
+    const terms =
+      categorySearchTerms(
+        category,
+      );
 
-          return (
-            normalizedQuery ===
-              normalizedPhrase ||
-            normalizedQuery.includes(
-              normalizedPhrase,
-            )
-          );
-        },
+    const detected =
+      terms.some(
+        (term) =>
+          normalizedQuery === term ||
+          normalizedQuery.includes(
+            term,
+          ),
       );
 
     if (detected) {
       return {
-        label:
-          category.label,
-        searchTerms:
-          category.searchTerms,
+        label: category,
+        searchTerms: terms,
       };
     }
   }
@@ -762,17 +703,18 @@ function productMatchesCategory(
 export async function findWhatsAppCategory(
   query: string,
 ): Promise<WhatsAppCategoryMatch | null> {
+  const products =
+    await getWhatsAppCatalog();
+
   const category =
     detectCategoryQuery(
       query,
+      products,
     );
 
   if (!category) {
     return null;
   }
-
-  const products =
-    await getWhatsAppCatalog();
 
   const matchingProducts =
     products
@@ -845,7 +787,7 @@ export function buildCategoryReply(
 
   lines.push(
     "",
-    "Dime cuál te interesa y te indico el precio ☕",
+    "Dime cuál te interesa y te indico el precio 😊",
   );
 
   return lines.join("\n");
@@ -862,7 +804,7 @@ export function formatCatalogClp(
     "es-CL",
     {
       style: "currency",
-      currency: "CLP",
+      currency: companyConfig.currency,
       maximumFractionDigits: 0,
     },
   ).format(value);
@@ -968,66 +910,19 @@ export function getPrimaryPrice(
 }
 
 /*********************************************************
- * FORMATOS COMERCIALES DE CAFÉ
+ * FORMATOS COMERCIALES
  *
- * Regla actual:
- *
- * 250 g → grano o molido.
- * 1 kg  → solo grano.
- *
- * Nunca ofrecemos 1 kg molido.
+ * Se ofrecen todos los formatos que tengan un precio válido.
+ * Cualquier restricción especial de una empresa debe vivir
+ * en su configuración comercial y no en este catálogo.
  *********************************************************/
 
 export function getCoffeeCustomerFormats(
   product: Product,
 ): ProductFormat[] {
-  if (
-    !isCoffeeProduct(
-      product,
-    )
-  ) {
-    return [];
-  }
-
-  const ground =
-    isGroundCoffeeProduct(
-      product,
-    );
-
-  return product.formats
-    .filter(
-      validPrice,
-    )
-    .filter(
-      (format) => {
-        if (
-          ground &&
-          isOneKgFormat(
-            format,
-          )
-        ) {
-          return false;
-        }
-
-        if (
-          is250gFormat(
-            format,
-          )
-        ) {
-          return true;
-        }
-
-        if (
-          isOneKgFormat(
-            format,
-          )
-        ) {
-          return !ground;
-        }
-
-        return false;
-      },
-    );
+  return product.formats.filter(
+    validPrice,
+  );
 }
 
 /*********************************************************
@@ -1037,12 +932,12 @@ export function getCoffeeCustomerFormats(
 export function buildExecutiveReply():
 string {
   return (
-    "Claro 😊 Esa consulta requiere una atención más personalizada. Un ejecutivo de Lican Coffee te responderá por este mismo WhatsApp."
+    `Claro 😊 Esa consulta requiere una atención más personalizada. Un ejecutivo de ${companyConfig.name} te responderá por este mismo WhatsApp.`
   );
 }
 
 /*********************************************************
- * PRECIO CAFÉ
+ * PRECIO DE PRODUCTO
  *********************************************************/
 
 function buildCoffeePriceReply(
@@ -1056,8 +951,8 @@ function buildCoffeePriceReply(
   }
 
   const formats =
-    getCoffeeCustomerFormats(
-      product,
+    product.formats.filter(
+      validPrice,
     );
 
   if (
@@ -1067,7 +962,7 @@ function buildCoffeePriceReply(
   }
 
   const lines: string[] = [
-    `☕ ${product.name}`,
+    `• ${product.name}`,
   ];
 
   for (
@@ -1083,7 +978,7 @@ function buildCoffeePriceReply(
 
   if (includeStock) {
     lines.push(
-      "Sí, tenemos stock disponible 😊",
+      "Disponible para venta 😊",
     );
   }
 
@@ -1097,36 +992,9 @@ function buildCoffeePriceReply(
 export function buildProductPriceReply(
   product: Product,
 ): string {
-  if (
-    isCoffeeProduct(
-      product,
-    )
-  ) {
-    return buildCoffeePriceReply(
-      product,
-      false,
-    );
-  }
-
-  const oneKg =
-    getOneKgFormat(
-      product,
-    );
-
-  if (
-    !oneKg ||
-    !validPrice(
-      oneKg,
-    )
-  ) {
-    return buildExecutiveReply();
-  }
-
-  return (
-    `☕ ${product.name}\n` +
-    `1 kg: ${formatCatalogClp(
-      oneKg.price,
-    )}`
+  return buildCoffeePriceReply(
+    product,
+    false,
   );
 }
 
@@ -1144,8 +1012,8 @@ export function buildProductStockReply(
   }
 
   return (
-    `☕ ${product.name}\n` +
-    "Sí, tenemos stock disponible 😊"
+    `• ${product.name}\n` +
+    "Disponible para venta 😊"
   );
 }
 
@@ -1156,43 +1024,9 @@ export function buildProductStockReply(
 export function buildProductPriceAndStockReply(
   product: Product,
 ): string {
-  if (
-    isCoffeeProduct(
-      product,
-    )
-  ) {
-    return buildCoffeePriceReply(
-      product,
-      true,
-    );
-  }
-
-  if (
-    product.stock <= 0
-  ) {
-    return buildExecutiveReply();
-  }
-
-  const oneKg =
-    getOneKgFormat(
-      product,
-    );
-
-  if (
-    !oneKg ||
-    !validPrice(
-      oneKg,
-    )
-  ) {
-    return buildExecutiveReply();
-  }
-
-  return (
-    `☕ ${product.name}\n` +
-    `1 kg: ${formatCatalogClp(
-      oneKg.price,
-    )}\n` +
-    "Sí, tenemos stock disponible 😊"
+  return buildCoffeePriceReply(
+    product,
+    true,
   );
 }
 
@@ -1219,8 +1053,39 @@ Promise<string> {
     return buildExecutiveReply();
   }
 
+  const categories = [
+    ...new Set(
+      products
+        .map(
+          (product) =>
+            categoryLabel(
+              product.category || "",
+            ),
+        )
+        .filter(Boolean),
+    ),
+  ];
+
+  if (
+    categories.length === 0
+  ) {
+    return (
+      `Claro 😊 En ${companyConfig.name} tenemos productos disponibles.\n\n` +
+      "Dime qué producto te interesa y te ayudo con las opciones y precios."
+    );
+  }
+
+  const categoryLines =
+    categories
+      .map(
+        (category) =>
+          `• ${category}`,
+      )
+      .join("\n");
+
   return (
-    "Claro 😊 En Lican Coffee tenemos café en grano y molido, cappuccinos y mezclas, chocolate, té chai, crema de leche y otros productos para cafetería.\n\n" +
-    "Dime qué producto o categoría te interesa y te ayudo con las opciones disponibles ☕"
+    `Claro 😊 En ${companyConfig.name} tenemos estas categorías disponibles:\n\n` +
+    `${categoryLines}\n\n` +
+    "Dime qué categoría o producto te interesa y te ayudo con las opciones y precios."
   );
 }

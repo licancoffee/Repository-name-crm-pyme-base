@@ -18,16 +18,26 @@ export interface KaizenRequest {
 
 export interface KaizenResponse {
   ok: boolean;
+
   message: string;
+
   intent?: KaizenIntent;
+
   permission?: KaizenPermission;
+
   data?: unknown;
+
   error?: string;
 }
 
-export interface KaizenToolResult<T = unknown> {
+export interface KaizenToolResult<
+  T = unknown,
+> {
   ok: boolean;
+
   data?: T;
+
   message?: string;
+
   error?: string;
 }

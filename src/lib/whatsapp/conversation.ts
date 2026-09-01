@@ -21,17 +21,16 @@ import {
 import {
   buildCatalogReply,
   buildCategoryReply,
-  buildCoffeeOptionsReply,
   buildExecutiveReply,
   buildProductPriceAndStockReply,
   buildProductPriceReply,
   buildProductStockReply,
-  detectCoffeePresentation,
-  findCoffeeOptions,
   findWhatsAppCategory,
   findWhatsAppProduct,
   normalizeCatalogText,
 } from "./catalog";
+
+import { companyConfig } from "../config/company";
 
 export type ConversationResult = {
   handled: boolean;
@@ -57,7 +56,7 @@ function formatClp(
     "es-CL",
     {
       style: "currency",
-      currency: "CLP",
+      currency: companyConfig.currency,
       maximumFractionDigits: 0,
     },
   ).format(value);
@@ -216,178 +215,46 @@ function isCategoryBrowseQuestion(
   const normalized =
     normalizeText(text);
 
-  const exactCategories = [
-    "cafe",
-    "cafes",
-    "cappuccino",
-    "cappuccinos",
-    "capuccino",
-    "capuccinos",
-    "mezcla",
-    "mezclas",
+  if (!normalized) {
+    return false;
+  }
+
+  const browsePhrases = [
+    "que tienen de",
+    "que venden de",
+    "que opciones tienen de",
+    "que opciones hay de",
+    "cuales tienen de",
+    "cuales venden de",
+    "ver categoria",
+    "ver categorías",
+    "ver categorias",
+    "categoria",
+    "categoría",
   ];
 
   if (
-    exactCategories.includes(
-      normalized,
+    browsePhrases.some(
+      (phrase) =>
+        normalized.includes(
+          normalizeText(phrase),
+        ),
     )
   ) {
     return true;
   }
 
-  return [
-    "que cafes tienen",
-    "que cafe tienen",
-    "que cafes venden",
-    "que cafe venden",
-    "cuales cafes tienen",
-    "cuales cafes venden",
-
-    "que cappuccinos tienen",
-    "que cappuccino tienen",
-    "que capuccinos tienen",
-    "que capuccino tienen",
-    "cuales cappuccinos tienen",
-    "cuales capuccinos tienen",
-
-    "que mezclas tienen",
-    "que mezclas venden",
-    "cuales mezclas tienen",
-    "cuales mezclas venden",
-  ].some(
-    (phrase) =>
-      normalized.includes(
-        phrase,
-      ),
-  );
-}
-
-/*********************************************************
- * CONSULTA GENÉRICA DE CAFÉ
- *
- * Ejemplos:
- *
- * "¿Cuánto vale el café en grano?"
- * "¿Qué café en grano tienen?"
- * "¿Cuánto cuesta el café molido?"
- *
- * No elegimos una variedad arbitrariamente.
- *********************************************************/
-
-function isGenericCoffeeQuestion(
-  text: string,
-): boolean {
-  let normalized =
-    normalizeText(text);
-
-  if (
-    !normalized.includes(
-      "cafe",
-    )
-  ) {
-    return false;
-  }
-
-  const removableWords = [
-    "cuanto",
-    "cuantos",
-    "cuesta",
-    "cuestan",
-    "sale",
-    "salen",
-    "vale",
-    "valen",
-    "precio",
-    "precios",
-    "valor",
-    "valores",
-    "que",
-    "cual",
-    "cuales",
-    "tienen",
-    "venden",
-    "hay",
-    "disponible",
-    "disponibles",
-    "disponibilidad",
-    "el",
-    "la",
-    "los",
-    "las",
-    "del",
-  ];
-
-  for (
-    const word
-    of removableWords
-  ) {
-    normalized =
-      normalizeText(
-        normalized.replace(
-          new RegExp(
-            `\\b${word}\\b`,
-            "g",
-          ),
-          " ",
-        ),
-      );
-  }
-
-  return [
-    "cafe",
-    "cafes",
-    "cafe grano",
-    "cafe en grano",
-    "cafes grano",
-    "cafes en grano",
-    "cafe molido",
-    "cafes molidos",
-  ].includes(normalized);
-}
-
-/*********************************************************
- * CAFÉ MOLIDO 1 KG
- *
- * Regla comercial actual:
- * 1 kg molido no se ofrece.
- *********************************************************/
-
-function isOneKgGroundCoffeeQuestion(
-  text: string,
-): boolean {
-  const normalized =
-    normalizeText(text);
-
-  if (
-    !normalized.includes(
-      "cafe",
-    ) ||
-    !normalized.includes(
-      "molido",
-    )
-  ) {
-    return false;
-  }
+  const wordCount =
+    normalized
+      .split(" ")
+      .filter(Boolean)
+      .length;
 
   return (
-    normalized.includes(
-      "1 kg",
-    ) ||
-    normalized.includes(
-      "1kg",
-    ) ||
-    normalized.includes(
-      "1 kilo",
-    ) ||
-    normalized.includes(
-      "un kilo",
-    ) ||
-    normalized.includes(
-      "1000 g",
-    ) ||
-    normalized.includes(
-      "1000g",
-    )
+    wordCount <= 3 &&
+    !isPriceQuestion(text) &&
+    !isStockQuestion(text) &&
+    !hasPurchaseIntent(text)
   );
 }
 
@@ -533,8 +400,7 @@ function isSpecificShippingQuestion(
 function buildShippingReply():
 string {
   return (
-    "Sí 😊 Realizamos envíos por Starken, Blue Express y Correos de Chile.\n\n" +
-    "Indícame tu localidad o comuna y te orientamos con la opción de envío disponible."
+    "Claro 😊 Para revisar las opciones de despacho, costo y plazo de entrega, indícame tu localidad o comuna."
   );
 }
 
@@ -558,7 +424,6 @@ function isExecutiveQuestion(
     "pago a 30 dias",
     "credito",
     "convenio",
-    "mezcla especial",
     "producto especial",
     "pedido especial",
   ].some(
@@ -955,25 +820,6 @@ export async function handleWhatsAppConversation(
   }
 
   /*******************************************************
-   * CAFÉ MOLIDO 1 KG
-   *
-   * No se ofrece actualmente.
-   *******************************************************/
-
-  if (
-    session.step === "idle" &&
-    isOneKgGroundCoffeeQuestion(
-      incomingText,
-    )
-  ) {
-    return {
-      handled: true,
-      reply:
-        buildExecutiveReply(),
-    };
-  }
-
-  /*******************************************************
    * ENVÍOS GENERALES
    *******************************************************/
 
@@ -1018,55 +864,6 @@ export async function handleWhatsAppConversation(
     } catch (error) {
       console.error(
         "[WHATSAPP CATEGORY ERROR]",
-        error,
-      );
-
-      return {
-        handled: true,
-        reply:
-          buildExecutiveReply(),
-      };
-    }
-  }
-
-  /*******************************************************
-   * CONSULTA GENÉRICA DE CAFÉ
-   *
-   * Aquí evitamos que:
-   *
-   * "¿Cuánto vale el café en grano?"
-   *
-   * seleccione arbitrariamente una variedad.
-   *******************************************************/
-
-  if (
-    session.step === "idle" &&
-    isGenericCoffeeQuestion(
-      incomingText,
-    )
-  ) {
-    try {
-      const presentation =
-        detectCoffeePresentation(
-          incomingText,
-        );
-
-      const coffeeProducts =
-        await findCoffeeOptions(
-          presentation,
-        );
-
-      return {
-        handled: true,
-        reply:
-          buildCoffeeOptionsReply(
-            coffeeProducts,
-            presentation,
-          ),
-      };
-    } catch (error) {
-      console.error(
-        "[WHATSAPP COFFEE OPTIONS ERROR]",
         error,
       );
 
@@ -1513,7 +1310,7 @@ export async function handleWhatsAppConversation(
         return {
           handled: true,
           reply:
-            "No pude completar la cotización en este momento. Te atenderá un ejecutivo de Lican Coffee por este mismo WhatsApp 😊",
+            `No pude completar la cotización en este momento. Te atenderá un ejecutivo de ${companyConfig.name} por este mismo WhatsApp 😊`,
         };
       }
 
@@ -1537,7 +1334,7 @@ export async function handleWhatsAppConversation(
       return {
         handled: true,
         reply:
-          "No pude completar la cotización en este momento. Te atenderá un ejecutivo de Lican Coffee por este mismo WhatsApp 😊",
+          `No pude completar la cotización en este momento. Te atenderá un ejecutivo de ${companyConfig.name} por este mismo WhatsApp 😊`,
       };
     }
   }

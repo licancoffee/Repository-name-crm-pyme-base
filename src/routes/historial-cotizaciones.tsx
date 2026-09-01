@@ -42,6 +42,9 @@ import type {
   SaleLine,
 } from "@/lib/crm/types";
 
+import { companyConfig } from "@/lib/config/company";
+import { commercialConfig } from "@/lib/config/commercial";
+
 
 export const Route = createFileRoute(
   "/historial-cotizaciones",
@@ -50,12 +53,12 @@ export const Route = createFileRoute(
     meta: [
       {
         title:
-          "Historial de cotizaciones — Lican Coffee CRM",
+          `Historial de cotizaciones — ${companyConfig.name} CRM`,
       },
       {
         name: "description",
         content:
-          "Consulta, revisa y convierte cotizaciones de Lican Coffee en ventas.",
+          `Consulta, revisa y convierte cotizaciones de ${companyConfig.name} en ventas.`,
       },
     ],
   }),
@@ -509,7 +512,7 @@ function HistorialCotizaciones() {
       const priceType:
         PriceType =
         customer?.priceType ||
-        "LISTA";
+        (commercialConfig.defaultPriceType as PriceType);
 
       const draft:
         QuoteToSaleDraft = {
@@ -577,7 +580,7 @@ function HistorialCotizaciones() {
       };
 
       sessionStorage.setItem(
-        "lican:quote-to-sale",
+        "crm:quote-to-sale",
         JSON.stringify(
           draft,
         ),

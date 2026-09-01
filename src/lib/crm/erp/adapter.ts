@@ -1,63 +1,115 @@
-import type { Customer, DB, Product, Sale } from "../types";
+import type {
+  Customer,
+  DB,
+  Product,
+  Sale,
+} from "../types";
 
 /**
- * Capa de integración con el ERP (Google Sheets de Lican Coffee).
+ * Capa de integración con la fuente de datos principal del CRM.
  *
- * MODO PRUEBA: hoy la app usa `localAdapter` (localStorage). Cuando se
- * autorice la conexión, basta implementar `SheetsAdapter` con los mismos
- * métodos y cambiar `getErpAdapter()`; el resto de la app no cambia.
+ * La aplicación consume siempre la misma interfaz, independientemente
+ * de si los datos provienen de Google Sheets, Apps Script, una API,
+ * una base de datos externa o almacenamiento local.
  *
- * Entidades previstas en el ERP:
+ * Entidades principales:
  *  - clientes    -> Customer
- *  - productos   -> Product (precio lista / preferente por formato)
- *  - inventario  -> Product.stock (unidades físicas) + equivalencia kg
+ *  - productos   -> Product
+ *  - inventario  -> Product.stock
  *  - ventas      -> Sale
- *  - historial   -> Sale (estado GUARDADA / ANULADA)
+ *  - historial   -> Sale
  *  - movimientos -> StockMovement
  */
+
 export type StockMovement = {
   id: string;
   dateISO: string;
   productId: string;
-  /** Unidades físicas de stock (positivo entra, negativo sale). */
+
+  /**
+   * Unidades físicas de stock.
+   * Positivo = entrada.
+   * Negativo = salida.
+   */
   units: number;
-  reason: "VENTA" | "ANULACION" | "AJUSTE" | "COMPRA";
+
+  reason:
+    | "VENTA"
+    | "ANULACION"
+    | "AJUSTE"
+    | "COMPRA";
+
   refId?: string;
 };
 
 export interface ErpAdapter {
   readonly name: string;
   readonly connected: boolean;
+
   listCustomers(): Promise<Customer[]>;
+
   listProducts(): Promise<Product[]>;
+
   listSales(): Promise<Sale[]>;
-  pushCustomer(customer: Customer): Promise<void>;
-  pushSale(sale: Sale): Promise<void>;
-  pushStockMovement(movement: StockMovement): Promise<void>;
+
+  pushCustomer(
+    customer: Customer,
+  ): Promise<void>;
+
+  pushSale(
+    sale: Sale,
+  ): Promise<void>;
+
+  pushStockMovement(
+    movement: StockMovement,
+  ): Promise<void>;
 }
 
-/** Adaptador local (prototipo). No toca el ERP real. */
-export function createLocalAdapter(getDB: () => DB): ErpAdapter {
+/**
+ * Adaptador local.
+ *
+ * Se utiliza como respaldo cuando no existe una integración externa
+ * configurada o durante instalaciones iniciales.
+ */
+export function createLocalAdapter(
+  getDB: () => DB,
+): ErpAdapter {
   return {
-    name: "local-prototipo",
+    name: "local",
+
     connected: false,
+
     async listCustomers() {
       return getDB().customers;
     },
+
     async listProducts() {
       return getDB().products;
     },
+
     async listSales() {
       return getDB().sales;
     },
+
     async pushCustomer() {
-      /* no-op en modo prueba */
+      /**
+       * El almacenamiento local ya gestiona
+       * los cambios desde la capa de estado.
+       */
     },
+
     async pushSale() {
-      /* no-op en modo prueba */
+      /**
+       * El almacenamiento local ya gestiona
+       * los cambios desde la capa de estado.
+       */
     },
+
     async pushStockMovement() {
-      /* no-op en modo prueba */
+      /**
+       * El almacenamiento local ya gestiona
+       * los cambios desde la capa de estado.
+       */
     },
   };
 }

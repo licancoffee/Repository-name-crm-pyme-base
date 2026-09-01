@@ -1,36 +1,92 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 
-import { AppShell } from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  createFileRoute,
+} from "@tanstack/react-router";
 
-import { useDB } from "@/lib/crm/store";
-import { consultarStock } from "@/lib/kaizen/tools";
+import {
+  AppShell,
+} from "@/components/AppShell";
 
-export const Route = createFileRoute("/kaizen")({
-  component: KaizenPage,
-});
+import {
+  Button,
+} from "@/components/ui/button";
+
+import {
+  Input,
+} from "@/components/ui/input";
+
+import {
+  clientConfig,
+} from "@/lib/config/client";
+
+import {
+  useDB,
+} from "@/lib/crm/store";
+
+import {
+  consultarStock,
+} from "@/lib/kaizen/tools";
+
+export const Route =
+  createFileRoute(
+    "/kaizen",
+  )({
+    component:
+      KaizenPage,
+  });
 
 function KaizenPage() {
-  const db = useDB();
+  const db =
+    useDB();
 
-  const [message, setMessage] = useState("");
-  const [response, setResponse] = useState(
-    "Hola. Soy Kaizen. Puedes preguntarme por el stock de un producto.",
+  const assistantName =
+    clientConfig.whatsapp
+      .assistantName ||
+    "Asistente IA";
+
+  const kaizenEnabled =
+    clientConfig.modules
+      .kaizen;
+
+  const [
+    message,
+    setMessage,
+  ] = useState("");
+
+  const [
+    response,
+    setResponse,
+  ] = useState(
+    `Hola. Soy ${assistantName}. Puedes preguntarme por el stock de un producto.`,
   );
 
   function handleAsk() {
-    const text = message.trim();
+    if (!kaizenEnabled) {
+      return;
+    }
 
-    if (!text) return;
+    const text =
+      message.trim();
 
-    const cleanText = text
-      .replace(/[¿?]/g, "")
-      .replace(/[.,;:!]/g, "")
-      .trim();
+    if (!text) {
+      return;
+    }
 
-    const lower = cleanText.toLowerCase();
+    const cleanText =
+      text
+        .replace(
+          /[¿?]/g,
+          "",
+        )
+        .replace(
+          /[.,;:!]/g,
+          "",
+        )
+        .trim();
+
+    const lower =
+      cleanText.toLowerCase();
 
     const prefixes = [
       "cuanto stock tengo de",
@@ -42,16 +98,34 @@ function KaizenPage() {
       "consultar stock de",
     ];
 
-    let productName = cleanText;
+    let productName =
+      cleanText;
 
-    for (const prefix of prefixes) {
-      if (lower.startsWith(prefix)) {
-        productName = cleanText.slice(prefix.length).trim();
+    for (
+      const prefix
+      of prefixes
+    ) {
+      if (
+        lower.startsWith(
+          prefix,
+        )
+      ) {
+        productName =
+          cleanText
+            .slice(
+              prefix.length,
+            )
+            .trim();
+
         break;
       }
     }
 
-    const result = consultarStock(db, productName);
+    const result =
+      consultarStock(
+        db,
+        productName,
+      );
 
     setResponse(
       result.message ??
@@ -62,21 +136,40 @@ function KaizenPage() {
     setMessage("");
   }
 
-  return (
-    <AppShell>
-      <div className="mx-auto w-full max-w-2xl space-y-6 p-4">
-        <div>
-          <h1 className="text-2xl font-bold">Kaizen IA</h1>
+  if (!kaizenEnabled) {
+    return (
+      <AppShell
+        title="Asistente IA"
+        subtitle={
+          clientConfig
+            .company.name
+        }
+      >
+        <div className="mx-auto w-full max-w-2xl p-4">
+          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">
+              Módulo no habilitado
+            </h2>
 
-          <p className="text-sm text-muted-foreground">
-            Asistente interno de Lican Coffee
-          </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              El asistente IA no está habilitado para esta instalación.
+            </p>
+          </div>
         </div>
+      </AppShell>
+    );
+  }
 
+  return (
+    <AppShell
+      title={`${assistantName} IA`}
+      subtitle={`Asistente interno de ${clientConfig.company.name}`}
+    >
+      <div className="mx-auto w-full max-w-2xl space-y-6 p-4">
         <div className="rounded-2xl border bg-card p-4 shadow-sm">
           <div className="mb-4 rounded-xl bg-muted p-4">
             <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-              Kaizen
+              {assistantName}
             </div>
 
             <div className="text-base">
@@ -86,24 +179,42 @@ function KaizenPage() {
 
           <div className="flex gap-2">
             <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
+              value={
+                message
+              }
+              onChange={(
+                event,
+              ) =>
+                setMessage(
+                  event.target
+                    .value,
+                )
+              }
+              onKeyDown={(
+                event,
+              ) => {
+                if (
+                  event.key ===
+                  "Enter"
+                ) {
                   handleAsk();
                 }
               }}
-              placeholder="Ej: ¿Cuánto stock tengo de Chocolate?"
+              placeholder="Ej: ¿Cuánto stock tengo de Producto Demo A?"
             />
 
-            <Button onClick={handleAsk}>
+            <Button
+              onClick={
+                handleAsk
+              }
+            >
               Consultar
             </Button>
           </div>
         </div>
 
         <div className="rounded-xl border p-4 text-sm text-muted-foreground">
-          Primera versión de Kaizen: consulta de stock en modo solo lectura.
+          Asistente de consulta de stock en modo solo lectura.
         </div>
       </div>
     </AppShell>

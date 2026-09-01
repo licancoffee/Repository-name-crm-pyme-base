@@ -6,6 +6,10 @@ import type {
   CrearCotizacionResult,
 } from "../crm/cotizaciones/payload";
 
+import {
+  commercialConfig,
+} from "../config/commercial";
+
 import type {
   Product,
   ProductFormat,
@@ -36,19 +40,43 @@ export type WhatsAppQuoteResult =
   };
 
 /*********************************************************
+ * NORMALIZACIÓN
+ *********************************************************/
+
+function normalizeText(
+  value: string,
+): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim();
+}
+
+/*********************************************************
  * FORMATO DE VENTA
  *********************************************************/
 
 function getDefaultFormat(
   product: Product,
 ): ProductFormat {
-
   const format =
     product.formats[0];
 
   if (!format) {
     throw new Error(
-      `${product.name} no tiene formato de venta configurado en el ERP.`,
+      `${product.name} no tiene un formato de venta configurado.`,
     );
   }
 
@@ -56,22 +84,25 @@ function getDefaultFormat(
 }
 
 /*********************************************************
- * PRECIO BASE
+ * PRECIO LISTA
  *********************************************************/
 
 function getListPrice(
   format: ProductFormat,
 ): number {
-
   const price =
-    Number(format.price);
+    Number(
+      format.price,
+    );
 
   if (
-    !Number.isFinite(price) ||
+    !Number.isFinite(
+      price,
+    ) ||
     price <= 0
   ) {
     throw new Error(
-      `El formato ${format.label} no tiene un precio válido en el ERP.`,
+      `El formato ${format.label} no tiene un precio válido.`,
     );
   }
 
@@ -79,44 +110,119 @@ function getListPrice(
 }
 
 /*********************************************************
- * PRECIO PREFERENTE
- *
- * No se escriben precios manuales aquí.
- * Se utilizan price / prefPrice del ERP.
+ * REGLAS COMERCIALES
  *********************************************************/
 
-function hasPreferredPrice(
-  format: ProductFormat,
-): boolean {
+type ResolvedQuoteItem = {
+  product: Product;
+  format: ProductFormat;
+  quantity: number;
+};
 
-  const listPrice =
-    Number(format.price);
-
-  const preferredPrice =
-    Number(format.prefPrice);
-
-  return (
-    Number.isFinite(listPrice) &&
-    Number.isFinite(preferredPrice) &&
-    listPrice > 0 &&
-    preferredPrice > 0 &&
-    preferredPrice < listPrice
-  );
-}
-
-function getPreferredPrice(
-  format: ProductFormat,
+function getConfiguredPrice(
+  item: ResolvedQuoteItem,
+  allItems: ResolvedQuoteItem[],
 ): number {
+  const listPrice =
+    getListPrice(
+      item.format,
+    );
 
   if (
-    !hasPreferredPrice(format)
+    commercialConfig
+      .volumePricingRules
+      .length === 0
   ) {
-    return getListPrice(format);
+    return listPrice;
   }
 
-  return Number(
-    format.prefPrice,
-  );
+  const normalizedProductName =
+    normalizeText(
+      item.product.name,
+    );
+
+  for (
+    const rule
+    of commercialConfig
+      .volumePricingRules
+  ) {
+    if (!rule.enabled) {
+      continue;
+    }
+
+    const normalizedRuleProducts =
+      rule.productNames.map(
+        normalizeText,
+      );
+
+    const appliesToProduct =
+      normalizedRuleProducts.includes(
+        normalizedProductName,
+      );
+
+    if (
+      !appliesToProduct
+    ) {
+      continue;
+    }
+
+    const combinedQuantity =
+      allItems
+        .filter(
+          (candidate) =>
+            normalizedRuleProducts.includes(
+              normalizeText(
+                candidate.product.name,
+              ),
+            ),
+        )
+        .reduce(
+          (
+            total,
+            candidate,
+          ) =>
+            total +
+            candidate.quantity,
+          0,
+        );
+
+    if (
+      combinedQuantity >=
+      rule.minimumCombinedQuantity
+    ) {
+      const configuredVolumePrice =
+        Number(
+          rule.volumePrice,
+        );
+
+      if (
+        Number.isFinite(
+          configuredVolumePrice,
+        ) &&
+        configuredVolumePrice > 0
+      ) {
+        return configuredVolumePrice;
+      }
+    }
+
+    const configuredNormalPrice =
+      Number(
+        rule.normalPrice,
+      );
+
+    if (
+      Number.isFinite(
+        configuredNormalPrice,
+      ) &&
+      configuredNormalPrice > 0
+    ) {
+      return configuredNormalPrice;
+    }
+
+    return listPrice;
+  }
+
+  return listPrice;
 }
 
 /*********************************************************
@@ -126,7 +232,6 @@ function getPreferredPrice(
 export async function createWhatsAppQuote(
   session: WhatsAppSession,
 ): Promise<WhatsAppQuoteResult> {
-
   /*******************************************************
    * VALIDACIONES DE SESIÓN
    *******************************************************/
@@ -141,7 +246,9 @@ export async function createWhatsAppQuote(
 
   if (
     !session.email.trim() ||
-    !session.email.includes("@")
+    !session.email.includes(
+      "@",
+    )
   ) {
     throw new Error(
       "Falta un correo electrónico válido.",
@@ -157,7 +264,7 @@ export async function createWhatsAppQuote(
   }
 
   /*******************************************************
-   * CATÁLOGO REAL ERP
+   * CATÁLOGO
    *******************************************************/
 
   const products =
@@ -167,7 +274,7 @@ export async function createWhatsAppQuote(
     products.length === 0
   ) {
     throw new Error(
-      "El ERP no devolvió productos.",
+      "El catálogo no devolvió productos disponibles.",
     );
   }
 
@@ -175,10 +282,12 @@ export async function createWhatsAppQuote(
    * RESOLVER PRODUCTOS
    *******************************************************/
 
-  const resolved =
+  const resolved:
+    ResolvedQuoteItem[] =
     session.products.map(
-      (sessionProductName) => {
-
+      (
+        sessionProductName,
+      ) => {
         const match =
           findProductInCatalog(
             sessionProductName,
@@ -187,7 +296,7 @@ export async function createWhatsAppQuote(
 
         if (!match) {
           throw new Error(
-            `No encontré "${sessionProductName}" en el catálogo actual del ERP.`,
+            `No encontré "${sessionProductName}" en el catálogo actual.`,
           );
         }
 
@@ -202,7 +311,9 @@ export async function createWhatsAppQuote(
           );
 
         if (
-          !Number.isFinite(quantity) ||
+          !Number.isFinite(
+            quantity,
+          ) ||
           quantity <= 0
         ) {
           throw new Error(
@@ -218,8 +329,12 @@ export async function createWhatsAppQuote(
         /*************************************************
          * STOCK
          *
-         * quantity = cantidad comercial vendida
-         * format.units = unidades físicas que descuenta
+         * quantity:
+         * cantidad comercial solicitada.
+         *
+         * format.units:
+         * unidades físicas descontadas por cada unidad
+         * comercial.
          *************************************************/
 
         const requiredStock =
@@ -244,80 +359,32 @@ export async function createWhatsAppQuote(
     );
 
   /*******************************************************
-   * REGLA DE PRECIO POR VOLUMEN
-   *
-   * Si un producto tiene:
-   *
-   * prefPrice > 0
-   * y
-   * prefPrice < price
-   *
-   * el ERP está indicando que ese formato posee
-   * precio preferente.
-   *
-   * La regla actual se activa desde 4 unidades
-   * acumuladas de productos con precio preferente.
-   *
-   * Así evitamos nombres y precios hardcodeados.
-   *******************************************************/
-
-  const preferredEligibleQuantity =
-    resolved
-      .filter(
-        ({ format }) =>
-          hasPreferredPrice(
-            format,
-          ),
-      )
-      .reduce(
-        (
-          total,
-          item,
-        ) =>
-          total +
-          item.quantity,
-        0,
-      );
-
-  const usePreferredPrice =
-    preferredEligibleQuantity >= 4;
-
-  /*******************************************************
    * ITEMS FINALES
    *******************************************************/
 
   const items =
     resolved.map(
-      ({
-        product,
-        format,
-        quantity,
-      }) => {
-
+      (
+        item,
+      ) => {
         const precioUnitario =
-          usePreferredPrice &&
-          hasPreferredPrice(
-            format,
-          )
-            ? getPreferredPrice(
-                format,
-              )
-            : getListPrice(
-                format,
-              );
+          getConfiguredPrice(
+            item,
+            resolved,
+          );
 
         return {
           sku:
-            product.id,
+            item.product.id,
 
           producto:
-            product.name,
+            item.product.name,
 
           formato:
-            format.label,
+            item.format.label,
 
           cantidad:
-            quantity,
+            item.quantity,
 
           precioUnitario,
         };
@@ -325,9 +392,7 @@ export async function createWhatsAppQuote(
     );
 
   /*******************************************************
-   * CREAR COTIZACIÓN REAL
-   *
-   * Reutiliza el servicio del CRM.
+   * CREAR COTIZACIÓN
    *******************************************************/
 
   const result =

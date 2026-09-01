@@ -1,10 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { useState } from "react";
-import { ChevronDown, MessageCircle, Ban } from "lucide-react";
+
+import {
+  ChevronDown,
+  MessageCircle,
+  Ban,
+} from "lucide-react";
+
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+
 import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 
 import {
@@ -30,26 +39,27 @@ import {
 
 import { anularVentaErp } from "@/lib/crm/erp/sales.functions";
 
+import { companyConfig } from "@/lib/config/company";
+
 export const Route = createFileRoute("/historial")({
   head: () => ({
     meta: [
       {
-        title:
-          "Historial de ventas — Lican Coffee CRM",
+        title: `Historial de ventas — ${companyConfig.name} CRM`,
       },
       {
         name: "description",
         content:
-          "Ventas guardadas: detalle, total, forma de pago, comprobante y anulación.",
+          `Historial de ventas de ${companyConfig.name} con detalle, total, forma de pago, comprobante y anulación.`,
       },
       {
         property: "og:title",
-        content: "Historial — Lican Coffee CRM",
+        content: `Historial — ${companyConfig.name} CRM`,
       },
       {
         property: "og:description",
         content:
-          "Ventas guardadas de Lican Coffee.",
+          `Ventas guardadas e historial comercial de ${companyConfig.name}.`,
       },
     ],
   }),
@@ -66,7 +76,8 @@ function Historial() {
   const [cancellingId, setCancellingId] =
     useState<string | null>(null);
 
-  const sales = visibleSales(db);
+  const sales =
+    visibleSales(db);
 
   async function handleCancel(
     saleId: string,
@@ -76,38 +87,43 @@ function Historial() {
       return;
     }
 
-    const confirmar = window.confirm(
-      "¿Seguro que deseas anular esta venta?\n\n" +
-        "Esta acción devolverá el stock y marcará la venta como ANULADA.",
-    );
+    const confirmar =
+      window.confirm(
+        "¿Seguro que deseas anular esta venta?\n\n" +
+          "Esta acción devolverá el stock y marcará la venta como ANULADA.",
+      );
 
     if (!confirmar) {
       return;
     }
 
-    setCancellingId(saleId);
+    setCancellingId(
+      saleId,
+    );
 
     try {
       /**
-       * Venta real del ERP
+       * Venta registrada en la fuente de datos principal.
        */
       if (source === "erp") {
-        const result = await anularVentaErp({
-          data: {
-            ventaId: saleId,
-          },
-        });
+        const result =
+          await anularVentaErp({
+            data: {
+              ventaId:
+                saleId,
+            },
+          });
 
         if (!result.ok) {
           throw new Error(
             result.mensaje ||
               result.error ||
-              "No fue posible anular la venta en el ERP.",
+              "No fue posible anular la venta.",
           );
         }
 
         /**
-         * Volvemos a leer ERP para recuperar:
+         * Volvemos a sincronizar para recuperar:
          * - nuevo stock
          * - estado ANULADA
          * - movimientos actualizados
@@ -115,16 +131,18 @@ function Historial() {
         await syncErp();
 
         toast.success(
-          "Venta anulada en ERP y stock devuelto",
+          "Venta anulada y stock devuelto",
         );
 
         return;
       }
 
       /**
-       * Compatibilidad con antiguas ventas locales.
+       * Compatibilidad con ventas locales.
        */
-      cancelSale(saleId);
+      cancelSale(
+        saleId,
+      );
 
       toast.success(
         "Venta local anulada y stock devuelto",
@@ -141,7 +159,9 @@ function Historial() {
           : "No fue posible anular la venta.",
       );
     } finally {
-      setCancellingId(null);
+      setCancellingId(
+        null,
+      );
     }
   }
 
@@ -151,237 +171,249 @@ function Historial() {
       subtitle={`${sales.length} ventas`}
     >
       <div className="space-y-3">
-        {sales.map((s) => {
-          const t = saleTotals(
-            s.lines,
-            s.discountType,
-            s.discountValue,
-          );
+        {sales.map(
+          (sale) => {
+            const totals =
+              saleTotals(
+                sale.lines,
+                sale.discountType,
+                sale.discountValue,
+              );
 
-          const isOpen = open === s.id;
-          const source = saleSource(s);
+            const isOpen =
+              open === sale.id;
 
-          const isCancelled =
-            s.status === "ANULADA";
+            const source =
+              saleSource(
+                sale,
+              );
 
-          const isCancelling =
-            cancellingId === s.id;
+            const isCancelled =
+              sale.status ===
+              "ANULADA";
 
-          return (
-            <div
-              key={s.id}
-              className="overflow-hidden rounded-xl border border-border bg-card"
-            >
-              <button
-                onClick={() =>
-                  setOpen(
-                    isOpen
-                      ? null
-                      : s.id,
-                  )
-                }
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left"
+            const isCancelling =
+              cancellingId ===
+              sale.id;
+
+            return (
+              <div
+                key={sale.id}
+                className="overflow-hidden rounded-xl border border-border bg-card"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">
-                    {s.customerName}
-                  </p>
-
-                  <p className="text-xs text-muted-foreground">
-                    {s.id} ·{" "}
-                    {dateFmt(
-                      s.dateISO,
-                    )}
-                  </p>
-
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary">
-                      {
-                        paymentLabels[
-                          s.payment
-                        ]
-                      }
-                    </Badge>
-
-                    {s.priceType && (
-                      <Badge variant="outline">
-                        {
-                          s.priceType
-                        }
-                      </Badge>
-                    )}
-
-                    <Badge variant="outline">
-                      {source ===
-                      "erp"
-                        ? "ERP"
-                        : "Local"}
-                    </Badge>
-
-                    {isCancelled && (
-                      <Badge variant="destructive">
-                        ANULADA
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 text-right">
-                  <span className="font-display text-lg font-bold">
-                    {clp(
-                      s.total,
-                    )}
-                  </span>
-
-                  <ChevronDown
-                    className={`h-4 w-4 text-muted-foreground transition-transform ${
+                <button
+                  onClick={() =>
+                    setOpen(
                       isOpen
-                        ? "rotate-180"
-                        : ""
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-border px-4 pb-4 pt-3">
-                  <div className="space-y-1.5 text-sm">
-                    {s.lines.map(
-                      (l) => (
-                        <div
-                          key={`${l.productId}:${l.format}`}
-                          className="flex justify-between gap-3"
-                        >
-                          <span className="min-w-0 truncate">
-                            {
-                              l.name
-                            }{" "}
-                            ·{" "}
-                            {
-                              l.format
-                            }{" "}
-                            ×{" "}
-                            {qtyFmt(
-                              l.qty,
-                            )}{" "}
-                            ·{" "}
-                            {clp(
-                              l.price,
-                            )}{" "}
-                            c/u
-                          </span>
-
-                          <span className="shrink-0 font-medium">
-                            {clp(
-                              l.price *
-                                l.qty,
-                            )}
-                          </span>
-                        </div>
-                      ),
-                    )}
-                  </div>
-
-                  <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
-                    <Row
-                      label="Subtotal"
-                      value={clp(
-                        s.subtotal,
-                      )}
-                    />
-
-                    {s.discountAmount >
-                      0 && (
-                      <Row
-                        label="Descuento"
-                        value={`-${clp(
-                          s.discountAmount,
-                        )}`}
-                      />
-                    )}
-
-                    <Row
-                      label="Total"
-                      value={clp(
-                        s.total,
-                      )}
-                      bold
-                    />
-
-                    <Row
-                      label="Costo estimado"
-                      value={clp(
-                        t.cost,
-                      )}
-                    />
-
-                    <Row
-                      label="Utilidad neta est."
-                      value={clp(
-                        t.profit,
-                      )}
-                    />
-
-                    <Row
-                      label="Margen estimado"
-                      value={pct(
-                        t.margin,
-                      )}
-                    />
-                  </div>
-
-                  {s.note && (
-                    <p className="mt-3 rounded-lg bg-muted p-2 text-sm italic">
+                        ? null
+                        : sale.id,
+                    )
+                  }
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
                       {
-                        s.note
+                        sale.customerName
                       }
                     </p>
-                  )}
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                    <Button
-                      variant="outline"
-                      className="h-12"
-                      onClick={() =>
-                        saleWhatsapp(
-                          s,
-                        )
-                      }
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
+                    <p className="text-xs text-muted-foreground">
+                      {sale.id} ·{" "}
+                      {dateFmt(
+                        sale.dateISO,
+                      )}
+                    </p>
 
-                      Reenviar comprobante
-                    </Button>
-
-                    {!isCancelled && (
-                      <Button
-                        variant="destructive"
-                        className="h-12"
-                        disabled={
-                          Boolean(
-                            cancellingId,
-                          )
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary">
+                        {
+                          paymentLabels[
+                            sale.payment
+                          ]
                         }
+                      </Badge>
+
+                      {sale.priceType && (
+                        <Badge variant="outline">
+                          {
+                            sale.priceType
+                          }
+                        </Badge>
+                      )}
+
+                      <Badge variant="outline">
+                        {source ===
+                        "erp"
+                          ? "Sincronizada"
+                          : "Local"}
+                      </Badge>
+
+                      {isCancelled && (
+                        <Badge variant="destructive">
+                          ANULADA
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-right">
+                    <span className="font-display text-lg font-bold">
+                      {clp(
+                        sale.total,
+                      )}
+                    </span>
+
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${
+                        isOpen
+                          ? "rotate-180"
+                          : ""
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-border px-4 pb-4 pt-3">
+                    <div className="space-y-1.5 text-sm">
+                      {sale.lines.map(
+                        (line) => (
+                          <div
+                            key={`${line.productId}:${line.format}`}
+                            className="flex justify-between gap-3"
+                          >
+                            <span className="min-w-0 truncate">
+                              {
+                                line.name
+                              }{" "}
+                              ·{" "}
+                              {
+                                line.format
+                              }{" "}
+                              ×{" "}
+                              {qtyFmt(
+                                line.qty,
+                              )}{" "}
+                              ·{" "}
+                              {clp(
+                                line.price,
+                              )}{" "}
+                              c/u
+                            </span>
+
+                            <span className="shrink-0 font-medium">
+                              {clp(
+                                line.price *
+                                  line.qty,
+                              )}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
+                      <Row
+                        label="Subtotal"
+                        value={clp(
+                          sale.subtotal,
+                        )}
+                      />
+
+                      {sale.discountAmount >
+                        0 && (
+                        <Row
+                          label="Descuento"
+                          value={`-${clp(
+                            sale.discountAmount,
+                          )}`}
+                        />
+                      )}
+
+                      <Row
+                        label="Total"
+                        value={clp(
+                          sale.total,
+                        )}
+                        bold
+                      />
+
+                      <Row
+                        label="Costo estimado"
+                        value={clp(
+                          totals.cost,
+                        )}
+                      />
+
+                      <Row
+                        label="Utilidad neta est."
+                        value={clp(
+                          totals.profit,
+                        )}
+                      />
+
+                      <Row
+                        label="Margen estimado"
+                        value={pct(
+                          totals.margin,
+                        )}
+                      />
+                    </div>
+
+                    {sale.note && (
+                      <p className="mt-3 rounded-lg bg-muted p-2 text-sm italic">
+                        {
+                          sale.note
+                        }
+                      </p>
+                    )}
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <Button
+                        variant="outline"
+                        className="h-12"
                         onClick={() =>
-                          handleCancel(
-                            s.id,
-                            source,
+                          saleWhatsapp(
+                            sale,
                           )
                         }
                       >
-                        <Ban className="mr-2 h-4 w-4" />
+                        <MessageCircle className="mr-2 h-4 w-4" />
 
-                        {isCancelling
-                          ? "Anulando venta..."
-                          : "Anular venta"}
+                        Reenviar comprobante
                       </Button>
-                    )}
+
+                      {!isCancelled && (
+                        <Button
+                          variant="destructive"
+                          className="h-12"
+                          disabled={
+                            Boolean(
+                              cancellingId,
+                            )
+                          }
+                          onClick={() =>
+                            handleCancel(
+                              sale.id,
+                              source,
+                            )
+                          }
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+
+                          {isCancelling
+                            ? "Anulando venta..."
+                            : "Anular venta"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          },
+        )}
 
         {sales.length ===
           0 && (

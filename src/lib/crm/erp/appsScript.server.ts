@@ -5,33 +5,44 @@ import type {
 } from "./payload";
 
 /**
- * Cliente del backend ERP (Google Apps Script Web App).
+ * Cliente del backend de integración mediante Google Apps Script Web App.
  *
  * Variables requeridas:
  * - ERP_APPS_SCRIPT_URL
  * - CRM_API_TOKEN
  */
 async function post(
-  body: ErpSalePayload | ErpCancelPayload,
+  body:
+    | ErpSalePayload
+    | ErpCancelPayload,
 ): Promise<ErpWriteResult> {
-  const url = process.env["ERP_APPS_SCRIPT_URL"];
-  const token = process.env["CRM_API_TOKEN"];
+  const url =
+    process.env[
+      "ERP_APPS_SCRIPT_URL"
+    ];
+
+  const token =
+    process.env[
+      "CRM_API_TOKEN"
+    ];
 
   if (!url) {
     return {
       ok: false,
-      error: "SIN_ENDPOINT",
+      error:
+        "SIN_ENDPOINT",
       mensaje:
-        "Falta configurar la URL del backend del ERP (Apps Script).",
+        "Falta configurar la URL del backend de integración.",
     };
   }
 
   if (!token) {
     return {
       ok: false,
-      error: "SIN_TOKEN",
+      error:
+        "SIN_TOKEN",
       mensaje:
-        "Falta configurar CRM_API_TOKEN para escribir en el ERP.",
+        "Falta configurar CRM_API_TOKEN.",
     };
   }
 
@@ -40,46 +51,73 @@ async function post(
     token,
   };
 
-  let res: Response;
+  let response: Response;
 
   try {
-    res = await fetch(url, {
-      method: "POST",
-      redirect: "follow",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      body: JSON.stringify(payloadConToken),
-    });
-  } catch (err) {
-    console.error("ERP Apps Script fetch error", err);
+    response =
+      await fetch(
+        url,
+        {
+          method:
+            "POST",
 
-    return {
-      ok: false,
-      error: "SIN_CONEXION",
-      mensaje: "No se pudo contactar el ERP.",
-    };
-  }
+          redirect:
+            "follow",
 
-  const text = await res.text();
+          headers: {
+            "Content-Type":
+              "text/plain;charset=utf-8",
+          },
 
-  if (!res.ok) {
+          body:
+            JSON.stringify(
+              payloadConToken,
+            ),
+        },
+      );
+  } catch (error) {
     console.error(
-      `ERP Apps Script HTTP ${res.status}: ${text.slice(0, 500)}`,
+      "Apps Script integration fetch error",
+      error,
     );
 
     return {
       ok: false,
-      error: "ERROR_ERP",
-      mensaje: `El ERP respondió con error ${res.status}.`,
+      error:
+        "SIN_CONEXION",
+      mensaje:
+        "No se pudo contactar el sistema de integración.",
+    };
+  }
+
+  const text =
+    await response.text();
+
+  if (!response.ok) {
+    console.error(
+      `Apps Script HTTP ${response.status}: ${text.slice(
+        0,
+        500,
+      )}`,
+    );
+
+    return {
+      ok: false,
+      error:
+        "ERROR_BACKEND",
+      mensaje:
+        `El sistema de integración respondió con error ${response.status}.`,
     };
   }
 
   try {
-    const respuesta = JSON.parse(text);
+    const respuesta =
+      JSON.parse(
+        text,
+      );
 
     /**
-     * Respuesta normal del Apps Script:
+     * Respuesta normal esperada:
      *
      * {
      *   ok: true,
@@ -90,15 +128,13 @@ async function post(
      *     ...
      *   }
      * }
-     *
-     * El "ok" está en el nivel exterior.
-     * Lo incorporamos al resultado que recibe el CRM.
      */
     if (
       respuesta &&
       respuesta.ok === true &&
       respuesta.data &&
-      typeof respuesta.data === "object"
+      typeof respuesta.data ===
+        "object"
     ) {
       return {
         ok: true,
@@ -107,7 +143,7 @@ async function post(
     }
 
     /**
-     * Error devuelto por Apps Script.
+     * Error devuelto por el backend.
      */
     if (
       respuesta &&
@@ -115,13 +151,15 @@ async function post(
     ) {
       return {
         ok: false,
+
         error:
           respuesta.error ||
-          "ERROR_ERP",
+          "ERROR_BACKEND",
+
         mensaje:
           respuesta.mensaje ||
           respuesta.error ||
-          "El ERP rechazó la operación.",
+          "El sistema rechazó la operación.",
       };
     }
 
@@ -131,29 +169,40 @@ async function post(
      */
     if (
       respuesta &&
-      typeof respuesta === "object" &&
-      typeof respuesta.ok === "boolean"
+      typeof respuesta ===
+        "object" &&
+      typeof respuesta.ok ===
+        "boolean"
     ) {
       return respuesta as ErpWriteResult;
     }
 
     return {
       ok: false,
-      error: "RESPUESTA_INVALIDA",
+
+      error:
+        "RESPUESTA_INVALIDA",
+
       mensaje:
-        "El ERP respondió correctamente, pero el formato de la respuesta no fue reconocido.",
+        "El sistema respondió correctamente, pero el formato de la respuesta no fue reconocido.",
     };
-  } catch (err) {
+  } catch (error) {
     console.error(
-      `ERP Apps Script respuesta no JSON: ${text.slice(0, 500)}`,
-      err,
+      `Apps Script response is not valid JSON: ${text.slice(
+        0,
+        500,
+      )}`,
+      error,
     );
 
     return {
       ok: false,
-      error: "RESPUESTA_INVALIDA",
+
+      error:
+        "RESPUESTA_INVALIDA",
+
       mensaje:
-        "El ERP respondió en un formato inesperado.",
+        "El sistema respondió en un formato inesperado.",
     };
   }
 }
@@ -161,14 +210,18 @@ async function post(
 export function registrarVentaEnErp(
   payload: ErpSalePayload,
 ): Promise<ErpWriteResult> {
-  return post(payload);
+  return post(
+    payload,
+  );
 }
 
 export function anularVentaEnErp(
   ventaId: string,
 ): Promise<ErpWriteResult> {
   return post({
-    action: "anularVenta",
+    action:
+      "anularVenta",
+
     ventaId,
   });
 }

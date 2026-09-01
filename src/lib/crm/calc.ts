@@ -6,51 +6,105 @@ import type {
   SaleLine,
 } from "./types";
 
+import { companyConfig } from "@/lib/config/company";
+
 export const IVA = 1.19;
 
-export function lineTotal(l: SaleLine) {
-  return l.price * l.qty;
+export function lineTotal(
+  line: SaleLine,
+) {
+  return (
+    line.price *
+    line.qty
+  );
 }
 
-/** Unidades físicas de stock que consume una línea. */
-export function lineStockUnits(l: SaleLine) {
-  return l.qty * (l.formatUnits || 1);
+/**
+ * Unidades físicas de stock que consume una línea.
+ */
+export function lineStockUnits(
+  line: SaleLine,
+) {
+  return (
+    line.qty *
+    (line.formatUnits || 1)
+  );
 }
 
 export function saleTotals(
   lines: SaleLine[],
-  discountType: "monto" | "porcentaje",
+  discountType:
+    | "monto"
+    | "porcentaje",
   discountValue: number,
 ) {
-  const subtotal = lines.reduce((a, l) => a + lineTotal(l), 0);
+  const subtotal =
+    lines.reduce(
+      (total, line) =>
+        total +
+        lineTotal(line),
+      0,
+    );
 
   const rawDiscount =
-    discountType === "porcentaje"
-      ? (subtotal * (discountValue || 0)) / 100
+    discountType ===
+    "porcentaje"
+      ? (
+          subtotal *
+          (discountValue || 0)
+        ) / 100
       : discountValue || 0;
 
-  const discountAmount = Math.min(
-    Math.max(rawDiscount, 0),
-    subtotal,
-  );
+  const discountAmount =
+    Math.min(
+      Math.max(
+        rawDiscount,
+        0,
+      ),
+      subtotal,
+    );
 
-  const total = subtotal - discountAmount;
+  const total =
+    subtotal -
+    discountAmount;
 
   let netSale = 0;
   let cost = 0;
 
-  for (const l of lines) {
+  for (const line of lines) {
     const share =
       subtotal > 0
-        ? (lineTotal(l) / subtotal) * discountAmount
+        ? (
+            lineTotal(
+              line,
+            ) /
+            subtotal
+          ) *
+          discountAmount
         : 0;
 
-    netSale += (lineTotal(l) - share) / IVA;
-    cost += l.netCost * l.qty;
+    netSale +=
+      (
+        lineTotal(
+          line,
+        ) -
+        share
+      ) / IVA;
+
+    cost +=
+      line.netCost *
+      line.qty;
   }
 
-  const profit = netSale - cost;
-  const margin = netSale > 0 ? profit / netSale : 0;
+  const profit =
+    netSale -
+    cost;
+
+  const margin =
+    netSale > 0
+      ? profit /
+        netSale
+      : 0;
 
   return {
     subtotal,
@@ -69,42 +123,94 @@ export type StockStatus =
   | "BAJO"
   | "OK";
 
-export function stockStatus(p: Product): StockStatus {
-  if (p.stock <= 0) return "SIN STOCK";
-  if (p.stock <= p.min) return "CRÍTICO";
-  if (p.stock <= p.min * 2) return "BAJO";
+export function stockStatus(
+  product: Product,
+): StockStatus {
+  if (
+    product.stock <= 0
+  ) {
+    return "SIN STOCK";
+  }
+
+  if (
+    product.stock <=
+    product.min
+  ) {
+    return "CRÍTICO";
+  }
+
+  if (
+    product.stock <=
+    product.min * 2
+  ) {
+    return "BAJO";
+  }
 
   return "OK";
 }
 
-/** Texto de stock físico principal, ej. "49 bolsas 500 g". */
-export function stockLabel(p: Product) {
-  const n = (p.stock || 0).toLocaleString("es-CL", {
-    maximumFractionDigits: 2,
-  });
+/**
+ * Texto de stock físico principal.
+ * Ejemplo: "49 bolsas 500 g".
+ */
+export function stockLabel(
+  product: Product,
+) {
+  const value =
+    (
+      product.stock || 0
+    ).toLocaleString(
+      "es-CL",
+      {
+        maximumFractionDigits: 2,
+      },
+    );
 
-  const unit = p.stockUnitLabel;
+  const unit =
+    product.stockUnitLabel;
 
   const plural =
-    p.stock === 1
+    product.stock === 1
       ? unit
       : unit
-          .replace(/^bolsa/, "bolsas")
-          .replace(/^unidad/, "unidades")
-          .replace(/^caja/, "cajas");
+          .replace(
+            /^bolsa/,
+            "bolsas",
+          )
+          .replace(
+            /^unidad/,
+            "unidades",
+          )
+          .replace(
+            /^caja/,
+            "cajas",
+          );
 
-  return `${n} ${plural}`;
+  return `${value} ${plural}`;
 }
 
-/** Equivalencia secundaria en kg, si aplica. */
-export function stockKgLabel(p: Product) {
-  if (!p.kgPerUnit) return null;
+/**
+ * Equivalencia secundaria en kg, si aplica.
+ */
+export function stockKgLabel(
+  product: Product,
+) {
+  if (
+    !product.kgPerUnit
+  ) {
+    return null;
+  }
 
-  const kg = p.stock * p.kgPerUnit;
+  const kg =
+    product.stock *
+    product.kgPerUnit;
 
-  return `${kg.toLocaleString("es-CL", {
-    maximumFractionDigits: 2,
-  })} kg`;
+  return `${kg.toLocaleString(
+    "es-CL",
+    {
+      maximumFractionDigits: 2,
+    },
+  )} kg`;
 }
 
 export function customPriceKey(
@@ -114,134 +220,208 @@ export function customPriceKey(
   return `${productId}:${formatLabel}`;
 }
 
-/** Precio unitario según el tipo de precio del cliente. */
+/**
+ * Precio unitario según el tipo de precio del cliente.
+ */
 export function priceFor(
-  p: Product,
-  fmt: ProductFormat,
+  product: Product,
+  format: ProductFormat,
   customer: Customer | null,
 ): number {
-  if (!customer) return fmt.price;
-
-  if (customer.priceType === "PREFERENTE") {
-    return fmt.prefPrice;
+  if (!customer) {
+    return format.price;
   }
 
-  if (customer.priceType === "PERSONALIZADO") {
+  if (
+    customer.priceType ===
+    "PREFERENTE"
+  ) {
+    return format.prefPrice;
+  }
+
+  if (
+    customer.priceType ===
+    "PERSONALIZADO"
+  ) {
     const custom =
       customer.customPrices?.[
-        customPriceKey(p.id, fmt.label)
+        customPriceKey(
+          product.id,
+          format.label,
+        )
       ];
 
     if (
-      typeof custom === "number" &&
+      typeof custom ===
+        "number" &&
       custom > 0
     ) {
       return custom;
     }
 
-    return fmt.prefPrice;
+    return format.prefPrice;
   }
 
-  return fmt.price;
+  return format.price;
 }
 
 export function netCostForFormat(
-  p: Product,
-  fmt: ProductFormat,
+  product: Product,
+  format: ProductFormat,
 ) {
-  return p.netCost * fmt.units;
+  return (
+    product.netCost *
+    format.units
+  );
 }
 
-export const paymentLabels: Record<string, string> = {
+export const paymentLabels: Record<
+  string,
+  string
+> = {
   efectivo: "Efectivo",
-  transferencia: "Transferencia",
+  transferencia:
+    "Transferencia",
   debito: "Débito",
   credito: "Crédito",
   pendiente: "Pendiente",
 };
 
-export const priceTypeLabels: Record<string, string> = {
+export const priceTypeLabels: Record<
+  string,
+  string
+> = {
   LISTA: "Precio lista",
-  PREFERENTE: "Precio preferente",
-  PERSONALIZADO: "Precio personalizado",
+  PREFERENTE:
+    "Precio preferente",
+  PERSONALIZADO:
+    "Precio personalizado",
 };
 
-export function whatsappText(sale: {
-  customerName: string;
-  lines: SaleLine[];
-  subtotal: number;
-  discountAmount: number;
-  total: number;
-  payment: string;
-  note?: string;
-  id?: string;
-}) {
-  const money = (n: number) =>
+export function whatsappText(
+  sale: {
+    customerName: string;
+    lines: SaleLine[];
+    subtotal: number;
+    discountAmount: number;
+    total: number;
+    payment: string;
+    note?: string;
+    id?: string;
+  },
+) {
+  const money = (
+    value: number,
+  ) =>
     "$" +
-    Math.round(n).toLocaleString("es-CL");
+    Math.round(
+      value,
+    ).toLocaleString(
+      "es-CL",
+    );
 
-  const qty = (n: number) =>
-    n.toLocaleString("es-CL", {
-      maximumFractionDigits: 2,
-    });
+  const qty = (
+    value: number,
+  ) =>
+    value.toLocaleString(
+      "es-CL",
+      {
+        maximumFractionDigits: 2,
+      },
+    );
 
-  const fecha = new Date().toLocaleDateString(
-    "es-CL",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    },
-  );
+  const fecha =
+    new Date().toLocaleDateString(
+      "es-CL",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      },
+    );
 
-  const detalle = sale.lines
-    .map((l) => {
-      return [
-        `• ${l.name} (${l.format}) × ${qty(l.qty)}`,
-        `  ${money(l.price)} c/u — *${money(
-          l.price * l.qty,
-        )}*`,
-      ].join("\n");
-    })
-    .join("\n\n");
+  const detalle =
+    sale.lines
+      .map(
+        (line) =>
+          [
+            `• ${line.name} (${line.format}) × ${qty(line.qty)}`,
+            `  ${money(line.price)} c/u — *${money(
+              line.price *
+                line.qty,
+            )}*`,
+          ].join(
+            "\n",
+          ),
+      )
+      .join(
+        "\n\n",
+      );
 
   return [
-    "☕ *LICAN COFFEE*",
+    `*${companyConfig.name.toUpperCase()}*`,
     "*COMPROBANTE DE COMPRA*",
     "",
+
     sale.id
       ? `*Venta:* ${sale.id}`
       : "",
+
     `*Fecha:* ${fecha}`,
+
     `*Cliente:* ${
-      sale.customerName || "Sin cliente"
+      sale.customerName ||
+      "Sin cliente"
     }`,
+
     "",
     "*DETALLE DE LA COMPRA*",
     detalle,
     "",
     "─────────────",
-    `Subtotal: ${money(sale.subtotal)}`,
-    sale.discountAmount > 0
+
+    `Subtotal: ${money(
+      sale.subtotal,
+    )}`,
+
+    sale.discountAmount >
+    0
       ? `Descuento: -${money(
           sale.discountAmount,
         )}`
       : "",
-    `*TOTAL: ${money(sale.total)}*`,
+
+    `*TOTAL: ${money(
+      sale.total,
+    )}*`,
+
     "─────────────",
     "",
+
     `*Forma de pago:* ${
-      paymentLabels[sale.payment] ??
+      paymentLabels[
+        sale.payment
+      ] ??
       sale.payment
     }`,
+
     sale.note
       ? `*Observación:* ${sale.note}`
       : "",
+
     "",
     "✅ Compra registrada correctamente",
     "",
-    "Gracias por preferir *Lican Coffee* ☕",
-    "Café e insumos para cafeterías, negocios y emprendimientos.",
+
+    `Gracias por preferir *${companyConfig.name}*.`,
+
+    companyConfig.website
+      ? `🌐 ${companyConfig.website}`
+      : "",
+
+    companyConfig.phone
+      ? `📱 ${companyConfig.phone}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -251,31 +431,43 @@ export function openWhatsapp(
   phone: string,
   text: string,
 ) {
-  const digits = (phone || "").replace(
-    /\D/g,
-    "",
+  const digits =
+    (
+      phone || ""
+    ).replace(
+      /\D/g,
+      "",
+    );
+
+  const to =
+    digits
+      ? digits.length === 9
+        ? `56${digits}`
+        : digits
+      : "";
+
+  const url =
+    to
+      ? `https://wa.me/${to}?text=${encodeURIComponent(
+          text,
+        )}`
+      : `https://wa.me/?text=${encodeURIComponent(
+          text,
+        )}`;
+
+  window.open(
+    url,
+    "_blank",
   );
-
-  const to = digits
-    ? digits.length === 9
-      ? `56${digits}`
-      : digits
-    : "";
-
-  const url = to
-    ? `https://wa.me/${to}?text=${encodeURIComponent(
-        text,
-      )}`
-    : `https://wa.me/?text=${encodeURIComponent(
-        text,
-      )}`;
-
-  window.open(url, "_blank");
 }
 
-export function saleWhatsapp(sale: Sale) {
+export function saleWhatsapp(
+  sale: Sale,
+) {
   openWhatsapp(
     sale.customerPhone,
-    whatsappText(sale),
+    whatsappText(
+      sale,
+    ),
   );
 }

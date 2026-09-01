@@ -2,8 +2,12 @@ import type { Customer, Product, ProductFormat } from "../types";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 
-/** Archivo ERP de Lican Coffee (solo lectura en esta etapa). */
-export const ERP_SPREADSHEET_ID = "1V4R0QD4CfkO7cMFNhnrUKCKZNhNutzP7NeTJru74iss";
+/**
+ * ID de Google Sheets utilizado por la integración directa.
+ * Debe configurarse por cliente en la variable de entorno ERP_SPREADSHEET_ID.
+ */
+export const ERP_SPREADSHEET_ID =
+  process.env["ERP_SPREADSHEET_ID"] ?? "";
 
 type Row = (string | number | null)[];
 
@@ -39,7 +43,14 @@ function headerIndex(header: Row) {
 async function batchGet(ranges: string[]): Promise<Record<string, Row[]>> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_SHEETS_API_KEY"];
-  if (!lovableKey || !connKey) throw new Error("Faltan credenciales del ERP (Google Sheets).");
+
+  if (!ERP_SPREADSHEET_ID) {
+    throw new Error("Falta configurar ERP_SPREADSHEET_ID.");
+  }
+
+  if (!lovableKey || !connKey) {
+    throw new Error("Faltan credenciales de Google Sheets.");
+  }
 
   const qs = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join("&");
   const url = `${GATEWAY}/spreadsheets/${ERP_SPREADSHEET_ID}/values:batchGet?${qs}&valueRenderOption=UNFORMATTED_VALUE`;
@@ -48,7 +59,7 @@ async function batchGet(ranges: string[]): Promise<Record<string, Row[]>> {
   });
   if (!res.ok) {
     const body = await res.text();
-    console.error(`ERP Sheets read failed [${res.status}]: ${body}`);
+    console.error(`Google Sheets read failed [${res.status}]: ${body}`);
     throw new Error(`No se pudo leer Google Sheets [${res.status}]`);
   }
   const json = (await res.json()) as {
@@ -139,8 +150,9 @@ function parseProducts(rows: Row[], inv: Map<string, InvRow>): Product[] {
     const category = str(r[iCat]);
     const masterFormat = str(r[iFmt]);
     const price = num(r[iPrice]);
-    // Precio preferente de mezclas: $12.900 IVA incl. (nunca sube el precio lista).
-    const prefPrice = /mezcla/i.test(category) ? Math.min(price, 12900) : price;
+    // Por defecto, el precio preferente coincide con el precio lista.
+    // Las reglas comerciales especiales se configuran fuera de esta capa.
+    const prefPrice = price;
 
     const invRow = inv.get(code);
     const unitLabel = invRow?.unit || masterFormat;
@@ -180,11 +192,11 @@ const normalizeName = (n: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
-/** Fichas que deben unificarse en un solo cliente. */
+/**
+ * Clave normalizada para identificar clientes duplicados.
+ */
 function unifyKey(name: string) {
-  const n = normalizeName(name);
-  if (n.includes("wilson") && n.includes("teran")) return "wilson-teran";
-  return n;
+  return normalizeName(name);
 }
 
 function parseCustomers(rows: Row[]): Customer[] {
@@ -421,28 +433,31 @@ console.log("[ERP] respuesta:", debugText.slice(0, 300));
       ];
 
       /*
-       * Mezclas almacenadas físicamente en bolsas de 500 g:
-       * Chocolate, Té Chai y Crema permiten vender 500 g o 1 kg.
+       * Si el inventario se controla físicamente en unidades de 500 g
+       * y el formato comercial principal es 1 kg, habilitamos ambos
+       * formatos sin depender de códigos de producto específicos.
        */
-      if (
-        ["LC-MEZ-001", "LC-MEZ-005", "LC-MEZ-006"].includes(
-          codigo,
-        )
-      ) {
+      const isHalfKgStock =
+        /500\s*g/i.test(stockUnitLabel);
+
+      const isOneKgFormat =
+        /1\s*kg/i.test(formato);
+
+      if (isHalfKgStock && isOneKgFormat) {
         formats.splice(
           0,
           formats.length,
           {
             label: "500 g",
             units: 1,
-            price: precio / 2,
-            prefPrice: precio / 2,
+            price: Math.round(precio / 2),
+            prefPrice: Math.round(precio / 2),
           },
           {
             label: "1 kg",
             units: 2,
             price: precio,
-prefPrice: precio,
+            prefPrice: precio,
           },
         );
       }
@@ -502,12 +517,31 @@ prefPrice: precio,
         productId: String(item.codigo ?? ""),
         name: String(item.producto ?? ""),
         format: String(item.formato ?? ""),
-        formatUnits:
-          ["LC-MEZ-001", "LC-MEZ-005", "LC-MEZ-006"].includes(
-            String(item.codigo ?? "").toUpperCase(),
-          ) && String(item.formato ?? "").toLowerCase() === "1 kg"
-            ? 2
-            : 1,
+        formatUnits: (() => {
+          const productCode =
+            String(item.codigo ?? "")
+              .trim()
+              .toUpperCase();
+
+          const saleFormat =
+            String(item.formato ?? "")
+              .trim();
+
+          const product =
+            products.find(
+              (candidate) =>
+                candidate.id === productCode,
+            );
+
+          const configuredFormat =
+            product?.formats.find(
+              (format) =>
+                format.label.toLowerCase() ===
+                saleFormat.toLowerCase(),
+            );
+
+          return configuredFormat?.units ?? 1;
+        })(),
         price: Number(item.precioUnitario ?? 0),
         netCost: Number(
           item.costoUnitario ??
