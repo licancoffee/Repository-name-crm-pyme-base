@@ -35,51 +35,60 @@ export const Route =
       InstallerHubPage,
   });
 
-type RemoteConfigState =
-  | {
-      status: "loading";
-      config: ClientConfig;
-      configured: false;
-      message: string;
-    }
-  | {
-      status: "ready";
-      config: ClientConfig;
-      configured: boolean;
-      message: string;
-      clientId?: string;
-      updatedAt?: string;
-    }
-  | {
-      status: "error";
-      config: ClientConfig;
-      configured: false;
-      message: string;
-    };
+type InstallerStatus = {
+  ok: boolean;
+  config: {
+    checked: boolean;
+    completed: boolean;
+    clientId: string;
+    updatedAt: string;
+    data: ClientConfig | null;
+    error: string;
+  };
+  products: {
+    checked: boolean;
+    completed: boolean;
+    count: number;
+    error: string;
+  };
+  customers: {
+    checked: boolean;
+    completed: boolean;
+    count: number | null;
+    verificationAvailable: boolean;
+    message: string;
+  };
+};
+
+type PageState = {
+  status: "loading" | "ready" | "error";
+  config: ClientConfig;
+  installer: InstallerStatus | null;
+  message: string;
+};
 
 function InstallerHubPage() {
   const [state, setState] =
-    useState<RemoteConfigState>({
+    useState<PageState>({
       status: "loading",
       config: clientConfig,
-      configured: false,
+      installer: null,
       message:
-        "Revisando configuración del cliente...",
+        "Revisando estado de la instalación...",
     });
 
-  async function loadConfig() {
+  async function loadStatus() {
     setState((current) => ({
+      ...current,
       status: "loading",
-      config: current.config,
-      configured: false,
       message:
-        "Revisando configuración del cliente...",
+        "Revisando estado de la instalación...",
     }));
 
     try {
       const response =
         await fetch(
-          "/api/client-config",
+          "/api/installer-status",
           {
             headers: {
               Accept:
@@ -90,41 +99,35 @@ function InstallerHubPage() {
         );
 
       const data =
-        await response.json();
+        (await response.json()) as InstallerStatus;
 
       if (!response.ok) {
         throw new Error(
-          data?.message ||
-            "No fue posible consultar la configuración.",
+          "No fue posible consultar el estado del instalador.",
         );
       }
 
-      const configured =
-        data?.configured === true &&
-        Boolean(data?.config);
+      const remoteConfig =
+        data.config?.completed &&
+        data.config.data
+          ? data.config.data
+          : clientConfig;
 
       setState({
         status: "ready",
-        config:
-          configured
-            ? data.config
-            : clientConfig,
-        configured,
-        clientId:
-          data?.clientId,
-        updatedAt:
-          data?.updatedAt,
+        config: remoteConfig,
+        installer: data,
         message:
-          configured
+          data.config?.completed
             ? "Configuración del cliente disponible."
-            : data?.reason ||
-              "Todavía no existe una configuración remota para esta instalación.",
+            : data.config?.error ||
+              "La configuración de empresa todavía está pendiente.",
       });
     } catch (error) {
       setState({
         status: "error",
         config: clientConfig,
-        configured: false,
+        installer: null,
         message:
           error instanceof Error
             ? error.message
@@ -134,7 +137,7 @@ function InstallerHubPage() {
   }
 
   useEffect(() => {
-    void loadConfig();
+    void loadStatus();
   }, []);
 
   const companyName =
@@ -152,6 +155,27 @@ function InstallerHubPage() {
         ).filter(Boolean).length,
       [state.config.modules],
     );
+
+  const configCompleted =
+    state.installer?.config.completed === true;
+
+  const productsCompleted =
+    state.installer?.products.completed === true;
+
+  const productsCount =
+    state.installer?.products.count ?? 0;
+
+  const customersVerified =
+    state.installer?.customers.verificationAvailable === true;
+
+  const customersCompleted =
+    state.installer?.customers.completed === true;
+
+  const fullyVerified =
+    configCompleted &&
+    productsCompleted &&
+    customersVerified &&
+    customersCompleted;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -192,7 +216,7 @@ function InstallerHubPage() {
           <button
             type="button"
             onClick={() =>
-              void loadConfig()
+              void loadStatus()
             }
             disabled={
               state.status ===
@@ -212,17 +236,32 @@ function InstallerHubPage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6">
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-4">
           <StatusCard
             icon={Database}
             label="Configuración"
             value={
-              state.configured
+              configCompleted
                 ? "Guardada"
                 : "Pendiente"
             }
             tone={
-              state.configured
+              configCompleted
+                ? "success"
+                : "neutral"
+            }
+          />
+
+          <StatusCard
+            icon={PackagePlus}
+            label="Productos"
+            value={
+              productsCompleted
+                ? `${productsCount} guardados`
+                : "Pendiente"
+            }
+            tone={
+              productsCompleted
                 ? "success"
                 : "neutral"
             }
@@ -241,7 +280,7 @@ function InstallerHubPage() {
             icon={Building2}
             label="Cliente"
             value={
-              state.clientId ||
+              state.installer?.config.clientId ||
               companyName
             }
             tone="neutral"
@@ -253,7 +292,7 @@ function InstallerHubPage() {
             {state.status ===
             "loading" ? (
               <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-muted-foreground" />
-            ) : state.configured ? (
+            ) : fullyVerified ? (
               <CheckCircle2 className="mt-0.5 h-5 w-5 text-success" />
             ) : (
               <Circle className="mt-0.5 h-5 w-5 text-muted-foreground" />
@@ -268,9 +307,15 @@ function InstallerHubPage() {
                 {state.message}
               </p>
 
-              {state.updatedAt && (
+              {state.installer?.config.updatedAt && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Última actualización: {state.updatedAt}
+                  Última actualización: {state.installer.config.updatedAt}
+                </p>
+              )}
+
+              {!customersVerified && (
+                <p className="mt-3 rounded-xl border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Clientes: guardado disponible, pero la lectura remota para verificar cantidad todavía no está implementada en el backend. No se marcará como completado hasta poder comprobarlo de forma real.
                 </p>
               )}
             </div>
@@ -288,7 +333,7 @@ function InstallerHubPage() {
             </h2>
 
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Cada paso utiliza el backend del instalador. Puedes volver a este centro en cualquier momento para revisar el estado y continuar.
+              El Centro verifica automáticamente lo que ya existe en el backend y evita marcar pasos como completos sin evidencia real.
             </p>
           </div>
 
@@ -298,14 +343,19 @@ function InstallerHubPage() {
               icon={Building2}
               title="Empresa y módulos"
               description="Define empresa, marca, módulos, pagos, despacho y WhatsApp."
+              detail={
+                configCompleted
+                  ? "Configuración verificada en backend."
+                  : "Configuración pendiente."
+              }
               href="/setup"
               action={
-                state.configured
+                configCompleted
                   ? "Revisar configuración"
                   : "Configurar empresa"
               }
               completed={
-                state.configured
+                configCompleted
               }
             />
 
@@ -314,9 +364,21 @@ function InstallerHubPage() {
               icon={PackagePlus}
               title="Productos"
               description="Carga y valida el catálogo inicial que utilizarán ventas e inventario."
+              detail={
+                productsCompleted
+                  ? `${productsCount} producto${productsCount === 1 ? "" : "s"} verificado${productsCount === 1 ? "" : "s"} en backend.`
+                  : state.installer?.products.error ||
+                    "Aún no hay productos verificados."
+              }
               href="/setup-productos"
-              action="Configurar productos"
-              completed={false}
+              action={
+                productsCompleted
+                  ? "Revisar productos"
+                  : "Configurar productos"
+              }
+              completed={
+                productsCompleted
+              }
             />
 
             <InstallerStep
@@ -324,22 +386,42 @@ function InstallerHubPage() {
               icon={Users}
               title="Clientes"
               description="Carga clientes iniciales y deja preparada la base comercial."
+              detail={
+                customersVerified
+                  ? customersCompleted
+                    ? `${state.installer?.customers.count ?? 0} clientes verificados.`
+                    : "No hay clientes guardados."
+                  : "Pendiente de verificación remota."
+              }
               href="/setup-clientes"
               action="Configurar clientes"
-              completed={false}
+              completed={
+                customersVerified &&
+                customersCompleted
+              }
             />
           </div>
         </section>
 
-        <section className="rounded-2xl border bg-card p-5 shadow-sm">
+        <section
+          className={
+            fullyVerified
+              ? "rounded-2xl border border-success/30 bg-success/10 p-5 shadow-sm"
+              : "rounded-2xl border bg-card p-5 shadow-sm"
+          }
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">
-                CRM Base
+                {fullyVerified
+                  ? "Instalación completa"
+                  : "CRM Base"}
               </h2>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Cuando termines la instalación puedes entrar al CRM para validar dashboard, ventas, clientes, inventario, historial y cotizaciones.
+                {fullyVerified
+                  ? "Empresa, productos y clientes están verificados. El CRM está listo para validación operativa."
+                  : "Puedes abrir el CRM para validar los módulos, pero el Centro todavía no declara la instalación como completa hasta verificar todos los pasos."}
               </p>
             </div>
 
@@ -362,6 +444,7 @@ function InstallerStep({
   icon: Icon,
   title,
   description,
+  detail,
   href,
   action,
   completed,
@@ -370,12 +453,13 @@ function InstallerStep({
   icon: typeof Building2;
   title: string;
   description: string;
+  detail: string;
   href: string;
   action: string;
   completed: boolean;
 }) {
   return (
-    <article className="flex min-h-64 flex-col rounded-2xl border bg-card p-5 shadow-sm">
+    <article className="flex min-h-72 flex-col rounded-2xl border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="grid h-11 w-11 place-items-center rounded-xl bg-muted">
           <Icon className="h-5 w-5" />
@@ -396,8 +480,12 @@ function InstallerStep({
         {title}
       </h3>
 
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {description}
+      </p>
+
+      <p className="mt-3 flex-1 text-xs font-medium text-muted-foreground">
+        {detail}
       </p>
 
       <a
