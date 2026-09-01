@@ -10,6 +10,10 @@ import {
   readInstalledProducts,
 } from "@/lib/setup/products-read.server";
 
+import {
+  readInstalledCustomers,
+} from "@/lib/setup/customers-read.server";
+
 function jsonResponse(
   body: unknown,
   status = 200,
@@ -48,10 +52,10 @@ async function handleGet() {
     customers: {
       checked: false,
       completed: false,
-      count: null as number | null,
-      verificationAvailable: false,
-      message:
-        "La lectura remota de clientes todavía no está implementada en el backend del instalador.",
+      count: 0,
+      verificationAvailable: true,
+      message: "",
+      error: "",
     },
   };
 
@@ -98,7 +102,39 @@ async function handleGet() {
         : "No fue posible revisar los productos.";
   }
 
-  return jsonResponse(result);
+  try {
+    const customers =
+      await readInstalledCustomers();
+
+    result.customers.checked = true;
+    result.customers.count =
+      customers.count;
+    result.customers.completed =
+      customers.count > 0;
+    result.customers.message =
+      customers.count > 0
+        ? "Clientes verificados correctamente."
+        : "No hay clientes iniciales guardados.";
+  } catch (error) {
+    result.customers.checked = true;
+    result.customers.completed = false;
+    result.customers.error =
+      error instanceof Error
+        ? error.message
+        : "No fue posible revisar los clientes.";
+    result.customers.message =
+      "El backend todavía no pudo confirmar los clientes guardados.";
+  }
+
+  const installationComplete =
+    result.config.completed &&
+    result.products.completed &&
+    result.customers.completed;
+
+  return jsonResponse({
+    ...result,
+    installationComplete,
+  });
 }
 
 export const Route =
