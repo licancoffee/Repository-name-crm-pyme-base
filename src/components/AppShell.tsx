@@ -2,12 +2,12 @@ import { Link } from "@tanstack/react-router";
 
 import {
   Building2,
-  FileText,
-  Home,
-  Package,
-  ReceiptText,
-  ShoppingCart,
-  Users,
+  ClipboardList,
+  ContactRound,
+  History,
+  House,
+  PackageSearch,
+  ShoppingBag,
 } from "lucide-react";
 
 import {
@@ -36,43 +36,43 @@ const navItems = [
   {
     to: "/",
     label: "Inicio",
-    icon: Home,
+    icon: House,
     module: "dashboard",
   },
   {
     to: "/nueva-venta",
     label: "Venta",
-    icon: ShoppingCart,
+    icon: ShoppingBag,
     module: "sales",
   },
   {
     to: "/cotizaciones",
     label: "Cotizaciones",
-    icon: FileText,
+    icon: ClipboardList,
     module: "quotes",
   },
   {
     to: "/clientes",
     label: "Clientes",
-    icon: Users,
+    icon: ContactRound,
     module: "customers",
   },
   {
     to: "/inventario",
     label: "Stock",
-    icon: Package,
+    icon: PackageSearch,
     module: "inventory",
   },
   {
     to: "/historial",
     label: "Historial",
-    icon: ReceiptText,
+    icon: History,
     module: "history",
   },
 ] as const satisfies ReadonlyArray<{
   to: string;
   label: string;
-  icon: typeof Home;
+  icon: typeof House;
   module: ModuleKey;
 }>;
 
@@ -135,6 +135,7 @@ function CompanyMark({
     >
       <Building2
         className={iconClass}
+        strokeWidth={1.8}
       />
     </div>
   );
@@ -263,7 +264,10 @@ export function AppShell({
                     },
                   }}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon
+                    className="h-[19px] w-[19px]"
+                    strokeWidth={1.8}
+                  />
                   {item.label}
                 </Link>
               ),
