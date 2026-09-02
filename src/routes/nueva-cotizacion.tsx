@@ -156,6 +156,8 @@ function NuevaCotizacion() {
     useState<{
       numero?: string;
       estado?: string;
+      pdfUrl?: string;
+      documentoUrl?: string;
     } | null>(null);
 
   const totals = useMemo(
@@ -913,6 +915,8 @@ function NuevaCotizacion() {
       setCreatedQuote({
         numero: result.numero,
         estado: result.estado,
+        pdfUrl: result.pdfUrl,
+        documentoUrl: result.documentoUrl,
       });
 
       setPreview(false);
@@ -975,6 +979,15 @@ function NuevaCotizacion() {
   }
 
   function openPreview() {
+    if (createdQuote?.pdfUrl) {
+      window.open(
+        createdQuote.pdfUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+
     if (!validate()) {
       return;
     }
@@ -1714,8 +1727,9 @@ function NuevaCotizacion() {
           }
         >
           <FileText className="mr-2 h-5 w-5" />
-
-          Vista previa de cotización
+          {createdQuote?.pdfUrl
+            ? "Ver cotización PDF"
+            : "Vista previa de cotización"}
         </Button>
       </section>
 
