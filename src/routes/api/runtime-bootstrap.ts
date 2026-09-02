@@ -32,26 +32,64 @@ function jsonResponse(
   );
 }
 
-async function handleGet() {
+async function handleGet(
+  request: Request,
+) {
   try {
+    const requestUrl =
+      new URL(request.url);
+
+    const requestedClientId =
+      requestUrl.searchParams
+        .get("clientId")
+        ?.trim() ||
+      process.env.CLIENT_ID ||
+      "";
+
+    if (!requestedClientId) {
+      return jsonResponse(
+        {
+          ok: false,
+          message:
+            "No se pudo determinar el CLIENT_ID activo.",
+        },
+        400,
+      );
+    }
+
     const [
       config,
       products,
       customers,
     ] = await Promise.all([
-      loadRemoteClientConfig(),
-      readInstalledProducts(),
-      readInstalledCustomers(),
+      loadRemoteClientConfig(
+        requestedClientId,
+      ),
+      readInstalledProducts(
+        requestedClientId,
+      ),
+      readInstalledCustomers(
+        requestedClientId,
+      ),
     ]);
+
+    if (
+      config.configured === true &&
+      config.clientId &&
+      config.clientId !==
+        requestedClientId
+    ) {
+      throw new Error(
+        "La configuración remota pertenece a otro CLIENT_ID.",
+      );
+    }
 
     return jsonResponse({
       ok: true,
       configured:
         config.configured === true,
       clientId:
-        config.configured === true
-          ? config.clientId || ""
-          : "",
+        requestedClientId,
       updatedAt:
         config.configured === true
           ? config.updatedAt || ""
@@ -91,8 +129,8 @@ export const Route =
   )({
     server: {
       handlers: {
-        GET: () =>
-          handleGet(),
+        GET: ({ request }) =>
+          handleGet(request),
       },
     },
   });
