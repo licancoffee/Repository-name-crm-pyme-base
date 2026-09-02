@@ -162,7 +162,7 @@ function SetupConexionPage() {
     try {
       const response =
         await fetch(
-          "/api/setup-connection",
+          "/api/setup-operational-connection",
           {
             method: "POST",
             headers: {
