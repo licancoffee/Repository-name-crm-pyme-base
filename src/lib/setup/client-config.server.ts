@@ -2,6 +2,10 @@ import type {
   ClientConfig,
 } from "@/lib/config/client";
 
+import {
+  getServerActiveClientId,
+} from "@/lib/config/active-client.server";
+
 type RemoteConfigResponse = {
   ok?: boolean;
   message?: string;
@@ -23,8 +27,9 @@ function getRemoteConfigSettings(
     process.env.CRM_API_TOKEN;
 
   const clientId =
-    clientIdOverride ||
-    process.env.CLIENT_ID;
+    getServerActiveClientId(
+      clientIdOverride,
+    );
 
   return {
     url,
@@ -50,7 +55,7 @@ export async function loadRemoteClientConfig(
       ok: true,
       configured: false,
       reason:
-        "CLIENT_ID no configurado.",
+        "No se pudo determinar el CLIENT_ID activo.",
     } as const;
   }
 
