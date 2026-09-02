@@ -1,5 +1,10 @@
+import {
+  resolveOperationalConnection,
+} from "./operational-connection.server";
+
 type ErpPingResponse = {
   ok?: boolean;
+  clientId?: string;
   mensaje?: string;
   message?: string;
   error?: string;
@@ -15,39 +20,24 @@ export type ErpConnectionCheck = {
   message: string;
 };
 
-export async function checkErpConnection(
-  requestedClientId?: string,
+export async function verifyOperationalCredentials(
+  input: {
+    clientId: string;
+    url: string;
+    token: string;
+  },
 ): Promise<ErpConnectionCheck> {
-  const activeClientId =
-    process.env.CLIENT_ID || "";
-
-  if (
-    requestedClientId &&
-    activeClientId &&
-    requestedClientId !== activeClientId
-  ) {
-    return {
-      configured: false,
-      reachable: false,
-      ready: false,
-      endpointConfigured: false,
-      tokenConfigured: false,
-      message:
-        "Esta empresa todavía no tiene una conexión operativa propia configurada.",
-    };
-  }
-
+  const clientId =
+    String(input.clientId || "").trim();
   const url =
-    process.env.ERP_APPS_SCRIPT_URL || "";
-
+    String(input.url || "").trim();
   const token =
-    process.env.CRM_API_TOKEN || "";
+    String(input.token || "").trim();
 
   const endpointConfigured =
-    Boolean(url.trim());
-
+    Boolean(url);
   const tokenConfigured =
-    Boolean(token.trim());
+    Boolean(token);
 
   if (!endpointConfigured || !tokenConfigured) {
     return {
@@ -58,10 +48,10 @@ export async function checkErpConnection(
       tokenConfigured,
       message:
         !endpointConfigured && !tokenConfigured
-          ? "Faltan ERP_APPS_SCRIPT_URL y CRM_API_TOKEN."
+          ? "Faltan URL operativa y token."
           : !endpointConfigured
-            ? "Falta ERP_APPS_SCRIPT_URL."
-            : "Falta CRM_API_TOKEN.",
+            ? "Falta la URL operativa."
+            : "Falta el token operativo.",
     };
   }
 
@@ -123,6 +113,22 @@ export async function checkErpConnection(
     }
 
     if (payload?.ok === true) {
+      if (
+        clientId &&
+        payload.clientId &&
+        payload.clientId !== clientId
+      ) {
+        return {
+          configured: true,
+          reachable: true,
+          ready: false,
+          endpointConfigured: true,
+          tokenConfigured: true,
+          message:
+            `El backend pertenece a ${payload.clientId}, no a ${clientId}.`,
+        };
+      }
+
       return {
         configured: true,
         reachable: true,
@@ -158,4 +164,34 @@ export async function checkErpConnection(
           : "No fue posible contactar el backend operativo.",
     };
   }
+}
+
+export async function checkErpConnection(
+  requestedClientId?: string,
+): Promise<ErpConnectionCheck> {
+  const connection =
+    await resolveOperationalConnection(
+      requestedClientId,
+    );
+
+  if (!connection) {
+    return {
+      configured: false,
+      reachable: false,
+      ready: false,
+      endpointConfigured: false,
+      tokenConfigured: false,
+      message:
+        "Esta empresa todavía no tiene una conexión operativa propia configurada.",
+    };
+  }
+
+  return verifyOperationalCredentials({
+    clientId:
+      connection.clientId,
+    url:
+      connection.url,
+    token:
+      connection.token,
+  });
 }
