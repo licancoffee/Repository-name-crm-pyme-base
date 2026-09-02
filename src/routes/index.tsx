@@ -4,10 +4,10 @@ import {
 } from "@tanstack/react-router";
 
 import {
-  Package,
-  ReceiptText,
-  ShoppingCart,
-  Users,
+  ContactRound,
+  History,
+  PackageSearch,
+  ShoppingBag,
 } from "lucide-react";
 
 import {
@@ -75,7 +75,7 @@ const tiles = [
     desc:
       "Registrar venta",
     icon:
-      ShoppingCart,
+      ShoppingBag,
   },
   {
     to:
@@ -85,7 +85,7 @@ const tiles = [
     desc:
       "Fichas y compras",
     icon:
-      Users,
+      ContactRound,
   },
   {
     to:
@@ -95,7 +95,7 @@ const tiles = [
     desc:
       "Stock y alertas",
     icon:
-      Package,
+      PackageSearch,
   },
   {
     to:
@@ -105,7 +105,7 @@ const tiles = [
     desc:
       "Ventas guardadas",
     icon:
-      ReceiptText,
+      History,
   },
 ] as const;
 
@@ -179,10 +179,13 @@ function Index() {
               to={
                 tile.to
               }
-              className="flex min-h-32 flex-col justify-between rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-transform active:scale-[0.98]"
+              className="flex min-h-32 flex-col justify-between rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-primary/30 active:scale-[0.98]"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-secondary-foreground">
-                <tile.icon className="h-5 w-5" />
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-primary">
+                <tile.icon
+                  className="h-5 w-5"
+                  strokeWidth={1.8}
+                />
               </span>
 
               <span className="mt-3 block">
@@ -214,12 +217,12 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3 text-center">
+    <div className="rounded-xl border border-border bg-card p-3 text-center shadow-[var(--shadow-card)]">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
 
-      <p className="mt-1 truncate font-display text-lg font-bold">
+      <p className="mt-1 truncate font-display text-lg font-bold text-foreground">
         {value}
       </p>
     </div>
