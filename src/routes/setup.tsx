@@ -32,6 +32,10 @@ import {
   type ClientConfig,
 } from "@/lib/config/client";
 
+import {
+  defaultClientConfig,
+} from "@/lib/config/client.defaults";
+
 export const Route =
   createFileRoute(
     "/setup",
@@ -61,62 +65,89 @@ type SaveState =
       message: string;
     };
 
+function isNewInstallationMode() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return new URLSearchParams(
+    window.location.search,
+  ).get("mode") === "new";
+}
+
+function normalizeRut(value: string) {
+  return value
+    .toUpperCase()
+    .replace(/[^0-9K]/g, "");
+}
+
+function clientIdFromRut(value: string) {
+  const normalized = normalizeRut(value);
+  return normalized
+    ? `CL-${normalized}`
+    : "";
+}
+
 function cloneClientConfig():
 SetupForm {
+  const sourceConfig =
+    isNewInstallationMode()
+      ? defaultClientConfig
+      : clientConfig;
   return {
-    ...clientConfig,
+    ...sourceConfig,
 
     company: {
-      ...clientConfig.company,
+      ...sourceConfig.company,
     },
 
     branding: {
-      ...clientConfig.branding,
+      ...sourceConfig.branding,
     },
 
     commercial: {
-      ...clientConfig.commercial,
+      ...sourceConfig.commercial,
 
       volumePricingRules: [
-        ...clientConfig
+        ...sourceConfig
           .commercial
           .volumePricingRules,
       ],
     },
 
     modules: {
-      ...clientConfig.modules,
+      ...sourceConfig.modules,
     },
 
     payments: {
-      ...clientConfig.payments,
+      ...sourceConfig.payments,
 
       methods: [
-        ...clientConfig
+        ...sourceConfig
           .payments
           .methods,
       ],
     },
 
     shipping: {
-      ...clientConfig.shipping,
+      ...sourceConfig.shipping,
     },
 
     whatsapp: {
-      ...clientConfig.whatsapp,
+      ...sourceConfig.whatsapp,
     },
 
     integrations: {
-      ...clientConfig.integrations,
+      ...sourceConfig.integrations,
 
       appsScript: {
-        ...clientConfig
+        ...sourceConfig
           .integrations
           .appsScript,
       },
 
       googleSheets: {
-        ...clientConfig
+        ...sourceConfig
           .integrations
           .googleSheets,
       },
@@ -309,6 +340,19 @@ function SetupPage() {
     ) {
       return;
     }
+    if (
+      isNewInstallationMode() &&
+      normalizeRut(form.company.rut) ===
+        normalizeRut(clientConfig.company.rut)
+    ) {
+      setSaveState({
+        status: "error",
+        message:
+          "Este RUT pertenece al cliente activo. Para una nueva instalación debes usar un RUT diferente.",
+      });
+      return;
+    }
+
 
     setSaveState({
       status: "saving",
@@ -424,6 +468,19 @@ function SetupPage() {
 
       <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
+          {isNewInstallationMode() && (
+            <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+              <p className="font-semibold">Modo nueva instalación</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Esta configuración parte desde la base genérica y no modifica al cliente activo mientras uses un RUT distinto.
+              </p>
+              {form.company.rut.trim() && (
+                <p className="mt-2 text-xs font-medium text-muted-foreground">
+                  CLIENT_ID esperado: {clientIdFromRut(form.company.rut)}
+                </p>
+              )}
+            </div>
+          )}
           <Section
             icon={Building2}
             title="Empresa"

@@ -244,6 +244,22 @@ function InstallerHubPage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6">
+        <section className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-semibold">Nueva instalación</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crear otra empresa sin reutilizar los datos de {companyName}.
+            </p>
+          </div>
+
+          <a
+            href="/setup?mode=new"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
+          >
+            Nueva instalación
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </section>
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatusCard
             icon={Database}
