@@ -126,23 +126,34 @@ export type StockStatus =
 export function stockStatus(
   product: Product,
 ): StockStatus {
-  if (
-    product.stock <= 0
-  ) {
+  const stock =
+    Number(product.stock || 0);
+
+  const minimum =
+    Math.max(
+      Number(product.min || 0),
+      0,
+    );
+
+  if (stock <= 0) {
     return "SIN STOCK";
   }
 
+  // Cuando no existe un mínimo configurado, cualquier stock positivo está OK.
+  if (minimum <= 0) {
+    return "OK";
+  }
+
+  // Crítico: queda como máximo la mitad del stock mínimo definido.
   if (
-    product.stock <=
-    product.min
+    stock <=
+    minimum * 0.5
   ) {
     return "CRÍTICO";
   }
 
-  if (
-    product.stock <=
-    product.min * 2
-  ) {
+  // Bajo: llegó al mínimo o está por debajo de él.
+  if (stock <= minimum) {
     return "BAJO";
   }
 
