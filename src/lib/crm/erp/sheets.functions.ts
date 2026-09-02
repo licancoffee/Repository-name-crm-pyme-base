@@ -9,12 +9,20 @@ import { createServerFn } from "@tanstack/react-start";
  */
 export const getErpSnapshot = createServerFn({
   method: "GET",
-}).handler(async () => {
-  const {
-    readOperationalSnapshot,
-  } = await import(
-    "./operational.server"
-  );
+})
+  .validator(
+    (data: {
+      clientId?: string;
+    } = {}) => data,
+  )
+  .handler(async ({ data }) => {
+    const {
+      readOperationalSnapshot,
+    } = await import(
+      "./operational.server"
+    );
 
-  return readOperationalSnapshot();
-});
+    return readOperationalSnapshot(
+      data.clientId,
+    );
+  });
