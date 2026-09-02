@@ -18,6 +18,7 @@ export type ErpConnectionCheck = {
   endpointConfigured: boolean;
   tokenConfigured: boolean;
   message: string;
+  source?: "central" | "env";
 };
 
 export async function verifyOperationalCredentials(
@@ -186,12 +187,19 @@ export async function checkErpConnection(
     };
   }
 
-  return verifyOperationalCredentials({
-    clientId:
-      connection.clientId,
-    url:
-      connection.url,
-    token:
-      connection.token,
-  });
+  const verification =
+    await verifyOperationalCredentials({
+      clientId:
+        connection.clientId,
+      url:
+        connection.url,
+      token:
+        connection.token,
+    });
+
+  return {
+    ...verification,
+    source:
+      connection.source,
+  };
 }
