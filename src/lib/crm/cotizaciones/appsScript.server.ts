@@ -3,6 +3,10 @@ import type {
   CrearCotizacionResult,
 } from "./payload";
 
+import {
+  resolveOperationalConnection,
+} from "@/lib/setup/operational-connection.server";
+
 
 /*********************************************************
  * TIPOS PARA HISTORIAL DE COTIZACIONES
@@ -99,41 +103,6 @@ export type MarcarCotizacionConvertidaResult =
 
 
 /*********************************************************
- * CONFIGURACIÓN
- *********************************************************/
-
-function obtenerConfiguracionCotizaciones() {
-  /**
-   * Cotizaciones y ERP utilizan actualmente
-   * el mismo Web App de Google Apps Script.
-   *
-   * Fuente principal:
-   * - ERP_APPS_SCRIPT_URL
-   * - CRM_API_TOKEN
-   *
-   * Variables antiguas:
-   * - COTIZACIONES_APPS_SCRIPT_URL
-   * - CRM_COTIZACIONES_TOKEN
-   *
-   * quedan como respaldo.
-   */
-
-  const url =
-    process.env["ERP_APPS_SCRIPT_URL"] ||
-    process.env["COTIZACIONES_APPS_SCRIPT_URL"];
-
-  const token =
-    process.env["CRM_API_TOKEN"] ||
-    process.env["CRM_COTIZACIONES_TOKEN"];
-
-  return {
-    url,
-    token,
-  };
-}
-
-
-/*********************************************************
  * POST GENÉRICO HACIA APPS SCRIPT
  *********************************************************/
 
@@ -150,46 +119,42 @@ async function postCotizacionesAppsScript(
       mensaje: string;
     }
 > {
-  const { url, token } =
-    obtenerConfiguracionCotizaciones();
+  const connection =
+    await resolveOperationalConnection();
 
-  if (!url) {
+  if (!connection) {
     return {
       ok: false,
-      error: "SIN_ENDPOINT",
+      error:
+        "SIN_CONEXION_CLIENTE",
       mensaje:
-        "Falta configurar ERP_APPS_SCRIPT_URL.",
-    };
-  }
-
-  if (!token) {
-    return {
-      ok: false,
-      error: "SIN_TOKEN",
-      mensaje:
-        "Falta configurar CRM_API_TOKEN.",
+        "Esta empresa no tiene una conexión operativa configurada.",
     };
   }
 
   const payloadConToken = {
     ...payload,
-    token,
+    token:
+      connection.token,
   };
 
   let response: Response;
 
   try {
-    response = await fetch(url, {
-      method: "POST",
-      redirect: "follow",
-      headers: {
-        "Content-Type":
-          "text/plain;charset=utf-8",
+    response = await fetch(
+      connection.url,
+      {
+        method: "POST",
+        redirect: "follow",
+        headers: {
+          "Content-Type":
+            "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(
+          payloadConToken,
+        ),
       },
-      body: JSON.stringify(
-        payloadConToken,
-      ),
-    });
+    );
   } catch (error) {
     console.error(
       "Cotizaciones Apps Script fetch error",
@@ -243,15 +208,20 @@ async function postCotizacionesAppsScript(
     };
   }
 
-  /**
-   * Respuesta estándar del ERP:
-   *
-   * {
-   *   ok: true,
-   *   version: "...",
-   *   data: ...
-   * }
-   */
+  if (
+    respuesta &&
+    respuesta.clientId &&
+    respuesta.clientId !==
+      connection.clientId
+  ) {
+    return {
+      ok: false,
+      error:
+        "CLIENT_ID_INCORRECTO",
+      mensaje:
+        "El backend operativo respondió con otro CLIENT_ID.",
+    };
+  }
 
   if (
     respuesta &&
@@ -265,10 +235,6 @@ async function postCotizacionesAppsScript(
           : respuesta,
     };
   }
-
-  /**
-   * Error estándar del ERP.
-   */
 
   if (
     respuesta &&
@@ -322,21 +288,6 @@ export async function crearCotizacionEnAppsScript(
   const data =
     respuesta.data as any;
 
-  /**
-   * La función crmCrearCotizacion_
-   * devuelve:
-   *
-   * {
-   *   ok: true,
-   *   numero,
-   *   estado,
-   *   total,
-   *   pdfUrl,
-   *   documentoUrl,
-   *   mensaje
-   * }
-   */
-
   if (
     data &&
     typeof data === "object"
@@ -376,11 +327,6 @@ Promise<ListarCotizacionesResult> {
       mensaje: respuesta.mensaje,
     };
   }
-
-  /**
-   * crmListarCotizaciones_()
-   * devuelve directamente un array.
-   */
 
   const cotizaciones =
     Array.isArray(respuesta.data)
