@@ -1,3 +1,7 @@
+import {
+  getServerActiveClientId,
+} from "@/lib/config/active-client.server";
+
 export type OperationalConnection = {
   clientId: string;
   url: string;
@@ -173,11 +177,9 @@ export async function resolveOperationalConnection(
   requestedClientId?: string,
 ): Promise<OperationalConnection | null> {
   const clientId =
-    String(
-      requestedClientId ||
-        process.env.CLIENT_ID ||
-        "",
-    ).trim();
+    getServerActiveClientId(
+      requestedClientId,
+    );
 
   if (!clientId) {
     return null;
