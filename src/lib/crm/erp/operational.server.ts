@@ -193,7 +193,7 @@ export async function readOperationalSnapshot() {
             : undefined;
 
       return {
-        // Importante: se conserva el código original. No convertir a mayúsculas.
+        // Se conserva el código original del instalador/ERP.
         id,
         name: String(raw.nombre ?? inventory?.producto ?? id),
         category: String(raw.categoria ?? ""),
@@ -244,19 +244,25 @@ export async function readOperationalSnapshot() {
 
       const qty = Number(item.cantidad ?? 0);
       const price = Number(item.precioUnitario ?? configuredFormat?.price ?? 0);
+      const formatUnits = Number(configuredFormat?.units ?? 1);
+
+      const backendUnitCost = Number(item.costoUnitario ?? 0);
+      const backendTotalCost = Number(item.costoTotal ?? 0);
+
+      const netCost =
+        backendUnitCost > 0
+          ? backendUnitCost
+          : backendTotalCost > 0 && qty > 0
+            ? backendTotalCost / qty
+            : Number(product?.netCost ?? 0) * formatUnits;
 
       return {
         productId: product?.id ?? itemCode,
         name: String(item.producto ?? product?.name ?? itemCode),
         format: saleFormat || configuredFormat?.label || "Unidad",
-        formatUnits: Number(configuredFormat?.units ?? 1),
+        formatUnits,
         price,
-        netCost: Number(
-          item.costoUnitario ??
-            (qty > 0 ? Number(item.costoTotal ?? 0) / qty : 0) ??
-            product?.netCost ??
-            0,
-        ),
+        netCost,
         qty,
       };
     });
