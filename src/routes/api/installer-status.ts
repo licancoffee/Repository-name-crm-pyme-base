@@ -86,6 +86,7 @@ async function handleGet(
       endpointConfigured: false,
       tokenConfigured: false,
       message: "",
+      source: "" as "" | "central" | "env",
     },
   };
 
@@ -181,6 +182,8 @@ async function handleGet(
       connection.tokenConfigured,
     message:
       connection.message,
+    source:
+      connection.source || "",
   };
 
   const installationComplete =
