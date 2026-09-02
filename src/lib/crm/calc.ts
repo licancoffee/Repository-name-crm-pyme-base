@@ -6,7 +6,7 @@ import type {
   SaleLine,
 } from "./types";
 
-import { companyConfig } from "@/lib/config/company";
+import { clientConfig } from "@/lib/config/client";
 
 export const IVA = 1.19;
 
@@ -358,8 +358,11 @@ export function whatsappText(
         "\n\n",
       );
 
+  const company =
+    clientConfig.company;
+
   return [
-    `*${companyConfig.name.toUpperCase()}*`,
+    `*${company.name.toUpperCase()}*`,
     "*COMPROBANTE DE COMPRA*",
     "",
 
@@ -413,14 +416,14 @@ export function whatsappText(
     "✅ Compra registrada correctamente",
     "",
 
-    `Gracias por preferir *${companyConfig.name}*.`,
+    `Gracias por preferir *${company.name}*.`,
 
-    companyConfig.website
-      ? `🌐 ${companyConfig.website}`
+    company.website
+      ? `🌐 ${company.website}`
       : "",
 
-    companyConfig.phone
-      ? `📱 ${companyConfig.phone}`
+    company.phone
+      ? `📱 ${company.phone}`
       : "",
   ]
     .filter(Boolean)
