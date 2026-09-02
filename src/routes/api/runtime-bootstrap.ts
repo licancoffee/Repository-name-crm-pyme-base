@@ -14,20 +14,86 @@ import {
   readInstalledCustomers,
 } from "@/lib/setup/customers-read.server";
 
+import {
+  ACTIVE_CLIENT_COOKIE,
+} from "@/lib/config/active-client.server";
+
+function readCookie(
+  request: Request,
+  name: string,
+) {
+  const header =
+    request.headers.get("cookie") || "";
+
+  for (
+    const part of header.split(/;\s*/)
+  ) {
+    const index =
+      part.indexOf("=");
+
+    if (index < 0) {
+      continue;
+    }
+
+    if (
+      part.slice(0, index) === name
+    ) {
+      return decodeURIComponent(
+        part.slice(index + 1),
+      );
+    }
+  }
+
+  return "";
+}
+
+function clientIdFromReferer(
+  request: Request,
+) {
+  const referer =
+    request.headers.get("referer");
+
+  if (!referer) {
+    return "";
+  }
+
+  try {
+    return (
+      new URL(referer)
+        .searchParams
+        .get("clientId")
+        ?.trim() || ""
+    );
+  } catch {
+    return "";
+  }
+}
+
 function jsonResponse(
   body: unknown,
   status = 200,
+  clientId = "",
 ) {
+  const headers =
+    new Headers({
+      "Content-Type":
+        "application/json; charset=utf-8",
+      "Cache-Control":
+        "no-store",
+    });
+
+  if (clientId) {
+    headers.append(
+      "Set-Cookie",
+      `${ACTIVE_CLIENT_COOKIE}=${encodeURIComponent(clientId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+    );
+  }
+
   return new Response(
     JSON.stringify(body),
     {
       status,
-      headers: {
-        "Content-Type":
-          "application/json; charset=utf-8",
-        "Cache-Control":
-          "no-store",
-      },
+      headers,
     },
   );
 }
@@ -43,6 +109,13 @@ async function handleGet(
       requestUrl.searchParams
         .get("clientId")
         ?.trim() ||
+      clientIdFromReferer(
+        request,
+      ) ||
+      readCookie(
+        request,
+        ACTIVE_CLIENT_COOKIE,
+      ).trim() ||
       process.env.CLIENT_ID ||
       "";
 
@@ -84,31 +157,35 @@ async function handleGet(
       );
     }
 
-    return jsonResponse({
-      ok: true,
-      configured:
-        config.configured === true,
-      clientId:
-        requestedClientId,
-      updatedAt:
-        config.configured === true
-          ? config.updatedAt || ""
-          : "",
-      config:
-        config.configured === true
-          ? config.config
-          : null,
-      products:
-        products.products,
-      customers:
-        customers.customers,
-      counts: {
+    return jsonResponse(
+      {
+        ok: true,
+        configured:
+          config.configured === true,
+        clientId:
+          requestedClientId,
+        updatedAt:
+          config.configured === true
+            ? config.updatedAt || ""
+            : "",
+        config:
+          config.configured === true
+            ? config.config
+            : null,
         products:
-          products.count,
+          products.products,
         customers:
-          customers.count,
+          customers.customers,
+        counts: {
+          products:
+            products.count,
+          customers:
+            customers.count,
+        },
       },
-    });
+      200,
+      requestedClientId,
+    );
   } catch (error) {
     return jsonResponse(
       {
