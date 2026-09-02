@@ -15,14 +15,33 @@ export type ErpConnectionCheck = {
   message: string;
 };
 
-export async function checkErpConnection(): Promise<ErpConnectionCheck> {
+export async function checkErpConnection(
+  requestedClientId?: string,
+): Promise<ErpConnectionCheck> {
+  const activeClientId =
+    process.env.CLIENT_ID || "";
+
+  if (
+    requestedClientId &&
+    activeClientId &&
+    requestedClientId !== activeClientId
+  ) {
+    return {
+      configured: false,
+      reachable: false,
+      ready: false,
+      endpointConfigured: false,
+      tokenConfigured: false,
+      message:
+        "Esta empresa todavía no tiene una conexión operativa propia configurada.",
+    };
+  }
+
   const url =
-    process.env.ERP_APPS_SCRIPT_URL ||
-    "";
+    process.env.ERP_APPS_SCRIPT_URL || "";
 
   const token =
-    process.env.CRM_API_TOKEN ||
-    "";
+    process.env.CRM_API_TOKEN || "";
 
   const endpointConfigured =
     Boolean(url.trim());
@@ -65,8 +84,7 @@ export async function checkErpConnection(): Promise<ErpConnectionCheck> {
       await response.text();
 
     let payload:
-      ErpPingResponse | null =
-      null;
+      ErpPingResponse | null = null;
 
     try {
       payload =
