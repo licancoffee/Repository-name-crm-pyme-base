@@ -14,6 +14,10 @@ import {
   readInstalledCustomers,
 } from "@/lib/setup/customers-read.server";
 
+import {
+  checkErpConnection,
+} from "@/lib/setup/erp-connection-check.server";
+
 function jsonResponse(
   body: unknown,
   status = 200,
@@ -56,6 +60,15 @@ async function handleGet() {
       verificationAvailable: true,
       message: "",
       error: "",
+    },
+    connection: {
+      checked: false,
+      configured: false,
+      reachable: false,
+      ready: false,
+      endpointConfigured: false,
+      tokenConfigured: false,
+      message: "",
     },
   };
 
@@ -126,14 +139,38 @@ async function handleGet() {
       "El backend todavía no pudo confirmar los clientes guardados.";
   }
 
+  const connection =
+    await checkErpConnection();
+
+  result.connection = {
+    checked: true,
+    configured:
+      connection.configured,
+    reachable:
+      connection.reachable,
+    ready:
+      connection.ready,
+    endpointConfigured:
+      connection.endpointConfigured,
+    tokenConfigured:
+      connection.tokenConfigured,
+    message:
+      connection.message,
+  };
+
   const installationComplete =
     result.config.completed &&
     result.products.completed &&
     result.customers.completed;
 
+  const operationalReady =
+    installationComplete &&
+    result.connection.ready;
+
   return jsonResponse({
     ...result,
     installationComplete,
+    operationalReady,
   });
 }
 
