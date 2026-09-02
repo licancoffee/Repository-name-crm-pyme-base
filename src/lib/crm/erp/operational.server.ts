@@ -5,6 +5,10 @@ import type {
   Sale,
 } from "../types";
 
+import {
+  resolveOperationalConnection,
+} from "@/lib/setup/operational-connection.server";
+
 type BackendInventory = {
   codigo?: string;
   producto?: string;
@@ -103,24 +107,35 @@ function priceType(value: unknown): Customer["priceType"] {
   return "LISTA";
 }
 
-export async function readOperationalSnapshot() {
-  const baseUrl = process.env["ERP_APPS_SCRIPT_URL"];
-  const token = process.env["CRM_API_TOKEN"];
+export async function readOperationalSnapshot(
+  requestedClientId?: string,
+) {
+  const connection =
+    await resolveOperationalConnection(
+      requestedClientId,
+    );
 
-  console.log("[ERP] URL cargada:", baseUrl ? "SI" : "NO");
-  console.log("[ERP] TOKEN cargado:", token ? "SI" : "NO");
+  console.log(
+    "[ERP] Conexión resuelta:",
+    connection ? connection.source : "NO",
+  );
 
-  if (!baseUrl) {
-    throw new Error("Falta configurar ERP_APPS_SCRIPT_URL.");
+  if (!connection) {
+    throw new Error(
+      "No existe una conexión operativa configurada para este CLIENT_ID.",
+    );
   }
 
-  if (!token) {
-    throw new Error("Falta configurar CRM_API_TOKEN.");
-  }
-
-  const apiUrl = new URL(baseUrl);
-  apiUrl.searchParams.set("action", "bootstrap");
-  apiUrl.searchParams.set("token", token);
+  const apiUrl =
+    new URL(connection.url);
+  apiUrl.searchParams.set(
+    "action",
+    "bootstrap",
+  );
+  apiUrl.searchParams.set(
+    "token",
+    connection.token,
+  );
 
   const response = await fetch(apiUrl.toString(), {
     method: "GET",
@@ -136,6 +151,16 @@ export async function readOperationalSnapshot() {
 
   if (!data?.ok) {
     throw new Error(data?.error || "El ERP respondió con error.");
+  }
+
+  if (
+    data.clientId &&
+    connection.clientId &&
+    data.clientId !== connection.clientId
+  ) {
+    throw new Error(
+      "El backend operativo respondió con otro CLIENT_ID.",
+    );
   }
 
   const inventoryByCode = new Map<string, BackendInventory>();
@@ -193,7 +218,6 @@ export async function readOperationalSnapshot() {
             : undefined;
 
       return {
-        // Se conserva el código original del instalador/ERP.
         id,
         name: String(raw.nombre ?? inventory?.producto ?? id),
         category: String(raw.categoria ?? ""),
@@ -298,6 +322,8 @@ export async function readOperationalSnapshot() {
   });
 
   return {
+    clientId:
+      connection.clientId,
     products,
     customers,
     sales,
