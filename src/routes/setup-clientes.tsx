@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -42,163 +43,334 @@ export const Route =
       SetupCustomersPage,
   });
 
-type SaveState =
-  | {
-      status: "idle";
-      message: "";
-    }
-  | {
-      status: "saving";
-      message: string;
-    }
-  | {
-      status: "success";
-      message: string;
-    }
-  | {
-      status: "error";
-      message: string;
-    };
+type SaveState = {
+  status:
+    | "idle"
+    | "loading"
+    | "saving"
+    | "success"
+    | "error";
+  message: string;
+};
+
+type ClientContext = {
+  ok?: boolean;
+  message?: string;
+  clientId?: string;
+  companyName?: string;
+  branding?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+  } | null;
+  customers?: Array<{
+    id?: string;
+    name?: string;
+    phone?: string;
+    address?: string;
+    note?: string;
+    priceType?:
+      | "LISTA"
+      | "PREFERENTE"
+      | "PERSONALIZADO";
+  }>;
+};
+
+function getClientId() {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return "";
+  }
+
+  return (
+    new URLSearchParams(
+      window.location.search,
+    ).get("clientId")?.trim() ||
+    ""
+  );
+}
+
+function customerToDraft(
+  customer:
+    NonNullable<
+      ClientContext["customers"]
+    >[number],
+): CustomerDraft {
+  return {
+    id:
+      customer.id ||
+      crypto.randomUUID(),
+    name:
+      customer.name || "",
+    phone:
+      customer.phone || "",
+    address:
+      customer.address || "",
+    note:
+      customer.note || "",
+    priceType:
+      customer.priceType ||
+      "LISTA",
+  };
+}
 
 function SetupCustomersPage() {
   const [
+    companyName,
+    setCompanyName,
+  ] = useState(
+    clientConfig.company.name,
+  );
+
+  const [
+    branding,
+    setBranding,
+  ] = useState({
+    primaryColor:
+      clientConfig.branding.primaryColor,
+    secondaryColor:
+      clientConfig.branding.secondaryColor,
+    accentColor:
+      clientConfig.branding.accentColor,
+  });
+
+  const [
     drafts,
     setDrafts,
-  ] =
-    useState<
-      CustomerDraft[]
-    >([
-      createEmptyCustomerDraft(),
-    ]);
+  ] = useState<CustomerDraft[]>([
+    createEmptyCustomerDraft(),
+  ]);
 
   const [
     validated,
     setValidated,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     saveState,
     setSaveState,
-  ] =
-    useState<SaveState>({
-      status: "idle",
-      message: "",
-    });
+  ] = useState<SaveState>({
+    status: "loading",
+    message:
+      "Cargando clientes guardados...",
+  });
 
   const [
     savedCount,
     setSavedCount,
-  ] =
-    useState(0);
+  ] = useState(0);
 
-  const result =
-    useMemo(
-      () =>
-        validateCustomerDrafts(
-          drafts,
-        ),
-      [drafts],
-    );
+  const result = useMemo(
+    () =>
+      validateCustomerDrafts(
+        drafts,
+      ),
+    [drafts],
+  );
+
+  useEffect(() => {
+    const clientId =
+      getClientId();
+
+    if (!clientId) {
+      setSaveState({
+        status: "error",
+        message:
+          "Falta clientId en la URL.",
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch(
+      `/api/setup-client-context?clientId=${encodeURIComponent(clientId)}`,
+      {
+        cache: "no-store",
+      },
+    )
+      .then(async (response) => {
+        const data =
+          (await response.json()) as
+            ClientContext;
+
+        if (
+          !response.ok ||
+          data.ok === false
+        ) {
+          throw new Error(
+            data.message ||
+              "No fue posible cargar la instalación.",
+          );
+        }
+
+        if (
+          data.clientId &&
+          data.clientId !== clientId
+        ) {
+          throw new Error(
+            "El backend respondió con otro CLIENT_ID.",
+          );
+        }
+
+        if (cancelled) return;
+
+        setCompanyName(
+          data.companyName ||
+            clientId,
+        );
+
+        if (data.branding) {
+          setBranding(
+            (current) => ({
+              primaryColor:
+                data.branding
+                  ?.primaryColor ||
+                current.primaryColor,
+              secondaryColor:
+                data.branding
+                  ?.secondaryColor ||
+                current.secondaryColor,
+              accentColor:
+                data.branding
+                  ?.accentColor ||
+                current.accentColor,
+            }),
+          );
+        }
+
+        const customers =
+          Array.isArray(
+            data.customers,
+          )
+            ? data.customers
+            : [];
+
+        setDrafts(
+          customers.length > 0
+            ? customers.map(
+                customerToDraft,
+              )
+            : [
+                createEmptyCustomerDraft(),
+              ],
+        );
+
+        setValidated(
+          customers.length > 0,
+        );
+
+        setSaveState({
+          status: "idle",
+          message: "",
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+
+        setSaveState({
+          status: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "No fue posible cargar los clientes.",
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function resetSaveState() {
     setSaveState({
       status: "idle",
       message: "",
     });
-
-    setSavedCount(
-      0,
-    );
+    setSavedCount(0);
   }
 
   function updateDraft(
     id: string,
-    key:
-      keyof CustomerDraft,
+    key: keyof CustomerDraft,
     value: string,
   ) {
-    setDrafts(
-      (current) =>
-        current.map(
-          (draft) =>
-            draft.id === id
-              ? {
-                  ...draft,
-                  [key]:
-                    value,
-                }
-              : draft,
-        ),
+    setDrafts((current) =>
+      current.map((draft) =>
+        draft.id === id
+          ? {
+              ...draft,
+              [key]: value,
+            }
+          : draft,
+      ),
     );
-
-    setValidated(
-      false,
-    );
-
+    setValidated(false);
     resetSaveState();
   }
 
   function addCustomer() {
-    setDrafts(
-      (current) => [
-        ...current,
-        createEmptyCustomerDraft(),
-      ],
-    );
-
-    setValidated(
-      false,
-    );
-
+    setDrafts((current) => [
+      ...current,
+      createEmptyCustomerDraft(),
+    ]);
+    setValidated(false);
     resetSaveState();
   }
 
   function removeCustomer(
     id: string,
   ) {
-    setDrafts(
-      (current) =>
+    setDrafts((current) => {
+      const next =
         current.filter(
           (draft) =>
             draft.id !== id,
-        ),
-    );
+        );
 
-    setValidated(
-      false,
-    );
-
+      return next.length > 0
+        ? next
+        : [
+            createEmptyCustomerDraft(),
+          ];
+    });
+    setValidated(false);
     resetSaveState();
   }
 
   function validateCustomers() {
-    setValidated(
-      true,
-    );
-
+    setValidated(true);
     resetSaveState();
   }
 
   async function saveCustomers() {
+    const clientId =
+      getClientId();
+
+    if (!clientId) {
+      setSaveState({
+        status: "error",
+        message:
+          "Falta clientId en la URL.",
+      });
+      return;
+    }
+
     const validation =
       validateCustomerDrafts(
         drafts,
       );
 
-    setValidated(
-      true,
-    );
+    setValidated(true);
 
-    if (
-      !validation.ok
-    ) {
+    if (!validation.ok) {
       setSaveState({
         status: "error",
         message:
           "Corrige los errores antes de guardar.",
       });
-
       return;
     }
 
@@ -214,46 +386,51 @@ function SetupCustomersPage() {
       message:
         "Guardando clientes...",
     });
-
-    setSavedCount(
-      0,
-    );
+    setSavedCount(0);
 
     try {
       const response =
         await fetch(
-          "/api/setup-customers",
+          "/api/setup-client-context",
           {
             method: "POST",
             headers: {
               "Content-Type":
                 "application/json",
             },
-            body:
-              JSON.stringify({
-                customers:
-                  drafts,
-              }),
+            body: JSON.stringify({
+              clientId,
+              customers: drafts,
+            }),
           },
         );
 
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok ||
+        data?.ok === false
+      ) {
         const errors =
           Array.isArray(
             data?.errors,
           )
-            ? data.errors.join(
-                " ",
-              )
+            ? data.errors.join(" ")
             : "";
 
         throw new Error(
           errors ||
             data?.message ||
             "No fue posible guardar los clientes.",
+        );
+      }
+
+      if (
+        data?.clientId !== clientId
+      ) {
+        throw new Error(
+          "El backend respondió con otro CLIENT_ID.",
         );
       }
 
@@ -287,7 +464,7 @@ function SetupCustomersPage() {
         className="border-b px-4 py-5 text-white"
         style={{
           backgroundImage:
-            `linear-gradient(135deg, ${clientConfig.branding.primaryColor}, ${clientConfig.branding.secondaryColor})`,
+            `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
         }}
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
@@ -296,9 +473,7 @@ function SetupCustomersPage() {
               className="grid h-11 w-11 place-items-center rounded-2xl shadow-sm"
               style={{
                 backgroundColor:
-                  clientConfig
-                    .branding
-                    .accentColor,
+                  branding.accentColor,
               }}
             >
               <UserPlus className="h-6 w-6" />
@@ -310,7 +485,7 @@ function SetupCustomersPage() {
               </p>
 
               <h1 className="text-xl font-bold">
-                Clientes de {clientConfig.company.name}
+                Clientes de {companyName}
               </h1>
             </div>
           </div>
@@ -323,25 +498,21 @@ function SetupCustomersPage() {
 
       <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-4">
+          {saveState.status ===
+            "loading" && (
+            <div className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+              Cargando clientes guardados...
+            </div>
+          )}
+
           {drafts.map(
-            (
-              draft,
-              index,
-            ) => (
+            (draft, index) => (
               <CustomerCard
-                key={
-                  draft.id
-                }
-                number={
-                  index + 1
-                }
-                draft={
-                  draft
-                }
-                onChange={(
-                  key,
-                  value,
-                ) =>
+                key={draft.id}
+                number={index + 1}
+                draft={draft}
+                onChange={(key, value) =>
                   updateDraft(
                     draft.id,
                     key,
@@ -354,8 +525,7 @@ function SetupCustomersPage() {
                   )
                 }
                 canRemove={
-                  drafts.length >
-                  1
+                  drafts.length > 1
                 }
               />
             ),
@@ -365,9 +535,7 @@ function SetupCustomersPage() {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={
-              addCustomer
-            }
+            onClick={addCustomer}
           >
             <Plus className="mr-2 h-4 w-4" />
             Agregar otro cliente
@@ -387,14 +555,12 @@ function SetupCustomersPage() {
                   drafts.length,
                 )}
               />
-
               <SummaryLine
                 label="Válidos"
                 value={String(
                   result.customers.length,
                 )}
               />
-
               <SummaryLine
                 label="Errores"
                 value={String(
@@ -420,11 +586,11 @@ function SetupCustomersPage() {
               disabled={
                 !result.ok ||
                 saveState.status ===
-                  "saving"
+                  "saving" ||
+                saveState.status ===
+                  "loading"
               }
-              onClick={
-                saveCustomers
-              }
+              onClick={saveCustomers}
             >
               {saveState.status ===
               "saving" ? (
@@ -443,73 +609,26 @@ function SetupCustomersPage() {
 
           {validated &&
             result.ok && (
-              <div className="rounded-2xl border border-success/30 bg-success/10 p-5">
-                <div className="flex items-center gap-2 text-success">
-                  <CheckCircle2 className="h-5 w-5" />
-
-                  <h3 className="font-semibold">
-                    Clientes válidos
-                  </h3>
-                </div>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Los clientes están listos para guardarse en el backend del instalador.
-                </p>
-              </div>
-            )}
-
-          {validated &&
-            !result.ok && (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
-                <h3 className="font-semibold text-destructive">
-                  Revisa los clientes
-                </h3>
-
-                <div className="mt-3 space-y-2 text-xs text-destructive">
-                  {result.errors.map(
-                    (
-                      error,
-                      index,
-                    ) => (
-                      <p
-                        key={`${error}-${index}`}
-                      >
-                        {error}
-                      </p>
-                    ),
-                  )}
-                </div>
-              </div>
+              <StatusCard
+                title="Clientes válidos"
+                text="Los clientes están listos y pertenecen a esta instalación."
+              />
             )}
 
           {saveState.status ===
             "success" && (
-              <div className="rounded-2xl border border-success/30 bg-success/10 p-5">
-                <div className="flex items-center gap-2 text-success">
-                  <CheckCircle2 className="h-5 w-5" />
-
-                  <h3 className="font-semibold">
-                    Clientes guardados
-                  </h3>
-                </div>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {saveState.message}
-                </p>
-
-                <p className="mt-3 text-sm font-medium">
-                  Clientes guardados: {savedCount}
-                </p>
-              </div>
+              <StatusCard
+                title="Clientes guardados"
+                text={`${saveState.message} Clientes guardados: ${savedCount}`}
+              />
             )}
 
           {saveState.status ===
             "error" && (
               <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
                 <h3 className="font-semibold text-destructive">
-                  No se pudo guardar
+                  No se pudo completar
                 </h3>
-
                 <p className="mt-2 text-sm text-destructive">
                   {saveState.message}
                 </p>
@@ -529,17 +648,13 @@ function CustomerCard({
   canRemove,
 }: {
   number: number;
-  draft:
-    CustomerDraft;
+  draft: CustomerDraft;
   onChange: (
-    key:
-      keyof CustomerDraft,
+    key: keyof CustomerDraft,
     value: string,
   ) => void;
-  onRemove:
-    () => void;
-  canRemove:
-    boolean;
+  onRemove: () => void;
+  canRemove: boolean;
 }) {
   return (
     <section className="rounded-2xl border bg-card p-5 shadow-sm">
@@ -548,7 +663,6 @@ function CustomerCard({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Cliente {number}
           </p>
-
           <h2 className="mt-1 font-semibold">
             {draft.name ||
               "Nuevo cliente"}
@@ -560,9 +674,7 @@ function CustomerCard({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={
-              onRemove
-            }
+            onClick={onRemove}
             aria-label="Eliminar cliente"
           >
             <Trash2 className="h-4 w-4" />
@@ -573,16 +685,11 @@ function CustomerCard({
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre">
           <Input
-            value={
-              draft.name
-            }
-            onChange={(
-              event,
-            ) =>
+            value={draft.name}
+            onChange={(event) =>
               onChange(
                 "name",
-                event.target
-                  .value,
+                event.target.value,
               )
             }
             placeholder="Ej: Cliente Uno"
@@ -591,16 +698,11 @@ function CustomerCard({
 
         <Field label="Teléfono">
           <Input
-            value={
-              draft.phone
-            }
-            onChange={(
-              event,
-            ) =>
+            value={draft.phone}
+            onChange={(event) =>
               onChange(
                 "phone",
-                event.target
-                  .value,
+                event.target.value,
               )
             }
             placeholder="+56 9..."
@@ -609,16 +711,11 @@ function CustomerCard({
 
         <Field label="Dirección">
           <Input
-            value={
-              draft.address
-            }
-            onChange={(
-              event,
-            ) =>
+            value={draft.address}
+            onChange={(event) =>
               onChange(
                 "address",
-                event.target
-                  .value,
+                event.target.value,
               )
             }
             placeholder="Dirección"
@@ -627,16 +724,11 @@ function CustomerCard({
 
         <Field label="Tipo de precio">
           <select
-            value={
-              draft.priceType
-            }
-            onChange={(
-              event,
-            ) =>
+            value={draft.priceType}
+            onChange={(event) =>
               onChange(
                 "priceType",
-                event.target
-                  .value,
+                event.target.value,
               )
             }
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -644,11 +736,9 @@ function CustomerCard({
             <option value="LISTA">
               Lista
             </option>
-
             <option value="PREFERENTE">
               Preferente
             </option>
-
             <option value="PERSONALIZADO">
               Personalizado
             </option>
@@ -658,16 +748,11 @@ function CustomerCard({
         <div className="sm:col-span-2">
           <Field label="Observación">
             <Input
-              value={
-                draft.note
-              }
-              onChange={(
-                event,
-              ) =>
+              value={draft.note}
+              onChange={(event) =>
                 onChange(
                   "note",
-                  event.target
-                    .value,
+                  event.target.value,
                 )
               }
               placeholder="Opcional"
@@ -684,15 +769,13 @@ function Field({
   children,
 }: {
   label: string;
-  children:
-    React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <label className="space-y-2">
       <span className="text-sm font-medium">
         {label}
       </span>
-
       {children}
     </label>
   );
@@ -710,10 +793,31 @@ function SummaryLine({
       <span className="text-muted-foreground">
         {label}
       </span>
-
       <span className="font-medium">
         {value}
       </span>
+    </div>
+  );
+}
+
+function StatusCard({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-success/30 bg-success/10 p-5">
+      <div className="flex items-center gap-2 text-success">
+        <CheckCircle2 className="h-5 w-5" />
+        <h3 className="font-semibold">
+          {title}
+        </h3>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {text}
+      </p>
     </div>
   );
 }
