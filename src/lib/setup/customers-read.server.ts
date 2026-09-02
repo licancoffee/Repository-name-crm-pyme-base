@@ -10,7 +10,9 @@ type RemoteCustomersResponse = {
   count?: number;
 };
 
-function getInstallerSettings() {
+function getInstallerSettings(
+  clientIdOverride?: string,
+) {
   const url =
     process.env.SETUP_STORAGE_URL;
 
@@ -18,6 +20,7 @@ function getInstallerSettings() {
     process.env.SETUP_STORAGE_TOKEN;
 
   const clientId =
+    clientIdOverride ||
     process.env.CLIENT_ID;
 
   if (!url) {
@@ -45,13 +48,17 @@ function getInstallerSettings() {
   };
 }
 
-export async function readInstalledCustomers() {
+export async function readInstalledCustomers(
+  clientIdOverride?: string,
+) {
   const {
     url,
     token,
     clientId,
   } =
-    getInstallerSettings();
+    getInstallerSettings(
+      clientIdOverride,
+    );
 
   const endpoint =
     new URL(url);
@@ -60,12 +67,10 @@ export async function readInstalledCustomers() {
     "action",
     "obtenerClientesCliente",
   );
-
   endpoint.searchParams.set(
     "token",
     token,
   );
-
   endpoint.searchParams.set(
     "clientId",
     clientId,
@@ -91,10 +96,9 @@ export async function readInstalledCustomers() {
     RemoteCustomersResponse;
 
   try {
-    result =
-      JSON.parse(
-        text,
-      ) as RemoteCustomersResponse;
+    result = JSON.parse(
+      text,
+    ) as RemoteCustomersResponse;
   } catch {
     throw new Error(
       "El backend del instalador devolvió clientes en un formato inválido.",
@@ -113,8 +117,7 @@ export async function readInstalledCustomers() {
 
   if (
     result.clientId &&
-    result.clientId !==
-      clientId
+    result.clientId !== clientId
   ) {
     throw new Error(
       "Los clientes recibidos pertenecen a otro CLIENT_ID.",
