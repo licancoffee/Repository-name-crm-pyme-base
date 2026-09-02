@@ -4,51 +4,38 @@ import type {
   ErpWriteResult,
 } from "./payload";
 
+import {
+  resolveOperationalConnection,
+} from "@/lib/setup/operational-connection.server";
+
 /**
- * Cliente del backend de integración mediante Google Apps Script Web App.
+ * Cliente del backend operativo mediante Google Apps Script Web App.
  *
- * Variables requeridas:
- * - ERP_APPS_SCRIPT_URL
- * - CRM_API_TOKEN
+ * La conexión se resuelve por CLIENT_ID activo desde el instalador central.
+ * El .env queda solamente como compatibilidad de respaldo.
  */
 async function post(
   body:
     | ErpSalePayload
     | ErpCancelPayload,
 ): Promise<ErpWriteResult> {
-  const url =
-    process.env[
-      "ERP_APPS_SCRIPT_URL"
-    ];
+  const connection =
+    await resolveOperationalConnection();
 
-  const token =
-    process.env[
-      "CRM_API_TOKEN"
-    ];
-
-  if (!url) {
+  if (!connection) {
     return {
       ok: false,
       error:
-        "SIN_ENDPOINT",
+        "SIN_CONEXION_CLIENTE",
       mensaje:
-        "Falta configurar la URL del backend de integración.",
-    };
-  }
-
-  if (!token) {
-    return {
-      ok: false,
-      error:
-        "SIN_TOKEN",
-      mensaje:
-        "Falta configurar CRM_API_TOKEN.",
+        "Esta empresa no tiene una conexión operativa configurada.",
     };
   }
 
   const payloadConToken = {
     ...body,
-    token,
+    token:
+      connection.token,
   };
 
   let response: Response;
@@ -56,7 +43,7 @@ async function post(
   try {
     response =
       await fetch(
-        url,
+        connection.url,
         {
           method:
             "POST",
@@ -116,19 +103,21 @@ async function post(
         text,
       );
 
-    /**
-     * Respuesta normal esperada:
-     *
-     * {
-     *   ok: true,
-     *   version: "...",
-     *   data: {
-     *     ventaId: "...",
-     *     estado: "ACTIVA",
-     *     ...
-     *   }
-     * }
-     */
+    if (
+      respuesta &&
+      respuesta.clientId &&
+      respuesta.clientId !==
+        connection.clientId
+    ) {
+      return {
+        ok: false,
+        error:
+          "CLIENT_ID_INCORRECTO",
+        mensaje:
+          "El backend operativo respondió con otro CLIENT_ID.",
+      };
+    }
+
     if (
       respuesta &&
       respuesta.ok === true &&
@@ -142,9 +131,6 @@ async function post(
       } as ErpWriteResult;
     }
 
-    /**
-     * Error devuelto por el backend.
-     */
     if (
       respuesta &&
       respuesta.ok === false
@@ -163,10 +149,6 @@ async function post(
       };
     }
 
-    /**
-     * Compatibilidad si el backend devuelve
-     * directamente un ErpWriteResult.
-     */
     if (
       respuesta &&
       typeof respuesta ===
