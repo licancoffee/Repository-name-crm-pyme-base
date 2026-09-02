@@ -2,6 +2,10 @@ import type {
   Product,
 } from "@/lib/crm/types";
 
+import {
+  getServerActiveClientId,
+} from "@/lib/config/active-client.server";
+
 type RemoteProductsResponse = {
   ok?: boolean;
   message?: string;
@@ -20,8 +24,9 @@ function getInstallerSettings(
     process.env.SETUP_STORAGE_TOKEN;
 
   const clientId =
-    clientIdOverride ||
-    process.env.CLIENT_ID;
+    getServerActiveClientId(
+      clientIdOverride,
+    );
 
   if (!url) {
     throw new Error(
@@ -37,7 +42,7 @@ function getInstallerSettings(
 
   if (!clientId) {
     throw new Error(
-      "CLIENT_ID no configurado.",
+      "No se pudo determinar el CLIENT_ID activo.",
     );
   }
 
