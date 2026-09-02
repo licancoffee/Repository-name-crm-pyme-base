@@ -15,16 +15,14 @@ if (!source.includes('function cleanSaleNote(')) {
   source = source.replace(anchor, `${helper}${anchor}`);
 }
 
-const oldBlock = `{sale.note && (\n                      <p className=\"mt-3 rounded-lg bg-muted p-2 text-sm italic\">\n                        {\n                          sale.note\n                        }\n                      </p>\n                    )}`;
+if (!source.includes('cleanSaleNote(sale.note)')) {
+  const noteRegex = /\{\s*sale\.note\s*\}/m;
 
-const newBlock = `{sale.note && (\n                      <p className=\"mt-3 rounded-lg bg-muted p-2 text-sm italic\">\n                        {cleanSaleNote(sale.note)}\n                      </p>\n                    )}`;
-
-if (!source.includes(oldBlock)) {
-  if (!source.includes('{cleanSaleNote(sale.note)}')) {
-    throw new Error('No se encontró el bloque visual de sale.note');
+  if (!noteRegex.test(source)) {
+    throw new Error('No se encontró la expresión sale.note en historial.tsx');
   }
-} else {
-  source = source.replace(oldBlock, newBlock);
+
+  source = source.replace(noteRegex, '{cleanSaleNote(sale.note)}');
 }
 
 fs.writeFileSync(path, source, 'utf8');
