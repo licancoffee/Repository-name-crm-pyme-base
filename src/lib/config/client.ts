@@ -118,13 +118,6 @@ import {
   generatedClientConfig,
 } from "./client.generated";
 
-/**
- * Combina una configuración parcial con la configuración base.
- *
- * Se usa tanto para:
- * 1. client.generated.ts
- * 2. configuración remota cargada por el instalador
- */
 export function mergeClientConfig(
   base: ClientConfig,
   override:
@@ -147,14 +140,9 @@ export function mergeClientConfig(
     commercial: {
       ...base.commercial,
       ...override.commercial,
-
       volumePricingRules:
-        override
-          .commercial
-          ?.volumePricingRules ??
-        base
-          .commercial
-          .volumePricingRules,
+        override.commercial?.volumePricingRules ??
+        base.commercial.volumePricingRules,
     },
 
     modules: {
@@ -165,14 +153,9 @@ export function mergeClientConfig(
     payments: {
       ...base.payments,
       ...override.payments,
-
       methods:
-        override
-          .payments
-          ?.methods ??
-        base
-          .payments
-          .methods,
+        override.payments?.methods ??
+        base.payments.methods,
     },
 
     shipping: {
@@ -188,25 +171,13 @@ export function mergeClientConfig(
     integrations: {
       ...base.integrations,
       ...override.integrations,
-
       appsScript: {
-        ...base
-          .integrations
-          .appsScript,
-
-        ...override
-          .integrations
-          ?.appsScript,
+        ...base.integrations.appsScript,
+        ...override.integrations?.appsScript,
       },
-
       googleSheets: {
-        ...base
-          .integrations
-          .googleSheets,
-
-        ...override
-          .integrations
-          ?.googleSheets,
+        ...base.integrations.googleSheets,
+        ...override.integrations?.googleSheets,
       },
     },
   };
@@ -218,80 +189,51 @@ const initialClientConfig =
     generatedClientConfig,
   );
 
-/**
- * Objeto compartido por todo el CRM.
- *
- * IMPORTANTE:
- * Se mantiene como un único objeto para que la configuración
- * remota pueda aplicarse antes de renderizar las rutas del CRM
- * sin cambiar todos los imports existentes.
- */
 export const clientConfig:
   ClientConfig = {
   ...initialClientConfig,
-
   company: {
     ...initialClientConfig.company,
   },
-
   branding: {
     ...initialClientConfig.branding,
   },
-
   commercial: {
     ...initialClientConfig.commercial,
-
     volumePricingRules: [
-      ...initialClientConfig
-        .commercial
-        .volumePricingRules,
+      ...initialClientConfig.commercial.volumePricingRules,
     ],
   },
-
   modules: {
     ...initialClientConfig.modules,
   },
-
   payments: {
     ...initialClientConfig.payments,
-
     methods: [
-      ...initialClientConfig
-        .payments
-        .methods,
+      ...initialClientConfig.payments.methods,
     ],
   },
-
   shipping: {
     ...initialClientConfig.shipping,
   },
-
   whatsapp: {
     ...initialClientConfig.whatsapp,
   },
-
   integrations: {
     ...initialClientConfig.integrations,
-
     appsScript: {
-      ...initialClientConfig
-        .integrations
-        .appsScript,
+      ...initialClientConfig.integrations.appsScript,
     },
-
     googleSheets: {
-      ...initialClientConfig
-        .integrations
-        .googleSheets,
+      ...initialClientConfig.integrations.googleSheets,
     },
   },
 };
 
 /**
- * Aplica una configuración remota al singleton clientConfig.
- *
- * El siguiente bloque del instalador llamará esta función
- * después de leer CONFIG_JSON desde CLIENT_CONFIG.
+ * Aplica configuración remota sin reemplazar las referencias de los
+ * objetos anidados. Esto es importante porque módulos como company.ts,
+ * commercial.ts y otros exportan referencias directas a estos objetos.
  */
 export function applyRuntimeClientConfig(
   remoteConfig:
@@ -303,10 +245,8 @@ export function applyRuntimeClientConfig(
       remoteConfig,
     );
 
-  Object.assign(
-    clientConfig,
-    merged,
-  );
+  clientConfig.setupVersion =
+    merged.setupVersion;
 
   Object.assign(
     clientConfig.company,
@@ -322,13 +262,8 @@ export function applyRuntimeClientConfig(
     clientConfig.commercial,
     merged.commercial,
   );
-
-  clientConfig
-    .commercial
-    .volumePricingRules = [
-    ...merged
-      .commercial
-      .volumePricingRules,
+  clientConfig.commercial.volumePricingRules = [
+    ...merged.commercial.volumePricingRules,
   ];
 
   Object.assign(
@@ -340,13 +275,8 @@ export function applyRuntimeClientConfig(
     clientConfig.payments,
     merged.payments,
   );
-
-  clientConfig
-    .payments
-    .methods = [
-    ...merged
-      .payments
-      .methods,
+  clientConfig.payments.methods = [
+    ...merged.payments.methods,
   ];
 
   Object.assign(
@@ -360,26 +290,13 @@ export function applyRuntimeClientConfig(
   );
 
   Object.assign(
-    clientConfig.integrations,
-    merged.integrations,
+    clientConfig.integrations.appsScript,
+    merged.integrations.appsScript,
   );
 
   Object.assign(
-    clientConfig
-      .integrations
-      .appsScript,
-    merged
-      .integrations
-      .appsScript,
-  );
-
-  Object.assign(
-    clientConfig
-      .integrations
-      .googleSheets,
-    merged
-      .integrations
-      .googleSheets,
+    clientConfig.integrations.googleSheets,
+    merged.integrations.googleSheets,
   );
 
   return clientConfig;
