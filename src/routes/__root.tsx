@@ -31,16 +31,119 @@ import {
   type ClientConfig,
 } from "../lib/config/client";
 
+import type {
+  Customer,
+  DB,
+  Product,
+} from "../lib/crm/types";
+
 import {
   reportLovableError,
 } from "../lib/lovable-error-reporting";
 
-type RuntimeConfigResponse = {
+type RuntimeBootstrapResponse = {
   ok: boolean;
   configured: boolean;
-  config?: ClientConfig;
+  clientId?: string;
+  updatedAt?: string;
+  config?: ClientConfig | null;
+  products?: Product[];
+  customers?: Customer[];
+  counts?: {
+    products: number;
+    customers: number;
+  };
   message?: string;
 };
+
+function normalizeStoragePart(
+  value: string,
+) {
+  return value
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-",
+    )
+    .replace(
+      /^-+|-+$/g,
+      "",
+    );
+}
+
+function getClientStorageKey() {
+  const identity =
+    normalizeStoragePart(
+      clientConfig.company.rut ||
+        clientConfig.company.name ||
+        "demo",
+    );
+
+  return `crm-pyme-v3:${identity || "demo"}`;
+}
+
+function hydrateInstalledData(
+  products: Product[],
+  customers: Customer[],
+) {
+  if (
+    typeof window === "undefined"
+  ) {
+    return;
+  }
+
+  const key =
+    getClientStorageKey();
+
+  let current: DB = {
+    products: [],
+    customers: [],
+    sales: [],
+  };
+
+  try {
+    const raw =
+      window.localStorage.getItem(
+        key,
+      );
+
+    if (raw) {
+      const parsed =
+        JSON.parse(raw) as DB;
+
+      if (
+        parsed &&
+        Array.isArray(parsed.products) &&
+        Array.isArray(parsed.customers) &&
+        Array.isArray(parsed.sales)
+      ) {
+        current = parsed;
+      }
+    }
+  } catch {
+    // Si el cache anterior está dañado, se reconstruye sin tocar el backend.
+  }
+
+  const next: DB = {
+    ...current,
+    products,
+    customers,
+    sales:
+      Array.isArray(current.sales)
+        ? current.sales
+        : [],
+  };
+
+  window.localStorage.setItem(
+    key,
+    JSON.stringify(next),
+  );
+}
 
 function NotFoundComponent() {
   return (
@@ -266,18 +369,19 @@ function RootComponent() {
       try {
         const response =
           await fetch(
-            "/api/client-config",
+            "/api/runtime-bootstrap",
             {
               headers: {
                 Accept:
                   "application/json",
               },
+              cache: "no-store",
             },
           );
 
         const result =
           await response.json() as
-            RuntimeConfigResponse;
+            RuntimeBootstrapResponse;
 
         if (!active) {
           return;
@@ -291,8 +395,20 @@ function RootComponent() {
           applyRuntimeClientConfig(
             result.config,
           );
+
+          hydrateInstalledData(
+            Array.isArray(
+              result.products,
+            )
+              ? result.products
+              : [],
+            Array.isArray(
+              result.customers,
+            )
+              ? result.customers
+              : [],
+          );
         } else if (
-          !response.ok &&
           result.message
         ) {
           setRuntimeError(
