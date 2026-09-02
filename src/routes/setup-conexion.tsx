@@ -26,6 +26,7 @@ export const Route =
   });
 
 type InstallerStatus = {
+  requestedClientId?: string;
   installationComplete?: boolean;
   operationalReady?: boolean;
   connection?: {
@@ -38,6 +39,18 @@ type InstallerStatus = {
     message: string;
   };
 };
+
+function getInstallationClientId() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return (
+    new URLSearchParams(
+      window.location.search,
+    ).get("clientId")?.trim() || ""
+  );
+}
 
 function SetupConexionPage() {
   const [status, setStatus] =
@@ -56,9 +69,17 @@ function SetupConexionPage() {
     setError("");
 
     try {
+      const clientId =
+        getInstallationClientId();
+
+      const endpoint =
+        clientId
+          ? `/api/installer-status?clientId=${encodeURIComponent(clientId)}`
+          : "/api/installer-status";
+
       const response =
         await fetch(
-          "/api/installer-status",
+          endpoint,
           {
             headers: {
               Accept:
@@ -75,6 +96,16 @@ function SetupConexionPage() {
       if (!response.ok) {
         throw new Error(
           "No fue posible revisar la conexión.",
+        );
+      }
+
+      if (
+        clientId &&
+        data?.requestedClientId &&
+        data.requestedClientId !== clientId
+      ) {
+        throw new Error(
+          "El estado recibido pertenece a otro CLIENT_ID.",
         );
       }
 
@@ -100,6 +131,9 @@ function SetupConexionPage() {
   const ready =
     connection?.ready === true;
 
+  const clientId =
+    getInstallationClientId();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b bg-slate-900 px-4 py-6 text-white">
@@ -119,6 +153,11 @@ function SetupConexionPage() {
               <p className="mt-1 text-sm text-white/70">
                 Paso 4 · Integración de ventas
               </p>
+              {clientId && (
+                <p className="mt-1 text-xs text-white/55">
+                  {clientId}
+                </p>
+              )}
             </div>
           </div>
 
@@ -191,7 +230,7 @@ function SetupConexionPage() {
         <section className="grid gap-4 sm:grid-cols-2">
           <CheckCard
             label="ERP_APPS_SCRIPT_URL"
-            description="Endpoint del backend que registra ventas."
+            description="Endpoint operativo propio de esta empresa."
             ok={
               connection?.endpointConfigured ===
               true
@@ -200,7 +239,7 @@ function SetupConexionPage() {
 
           <CheckCard
             label="CRM_API_TOKEN"
-            description="Credencial privada para autorizar operaciones."
+            description="Credencial privada propia de esta empresa."
             ok={
               connection?.tokenConfigured ===
               true
@@ -209,7 +248,7 @@ function SetupConexionPage() {
 
           <CheckCard
             label="Backend accesible"
-            description="El servidor pudo contactar el endpoint configurado."
+            description="El servidor pudo contactar el endpoint de esta instalación."
             ok={
               connection?.reachable ===
               true
@@ -218,7 +257,7 @@ function SetupConexionPage() {
 
           <CheckCard
             label="Operación autorizada"
-            description="El backend respondió correctamente al ping seguro."
+            description="El backend propio respondió correctamente al ping seguro."
             ok={ready}
           />
         </section>
@@ -231,7 +270,7 @@ function SetupConexionPage() {
                 Regla de seguridad
               </h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                El instalador solo comprueba si las credenciales existen y si el backend responde. Nunca muestra el token ni lo envía al navegador.
+                Una empresa nueva no puede reutilizar silenciosamente la conexión operativa de otro CLIENT_ID. Cada instalación debe tener su propio backend operativo.
               </p>
             </div>
           </div>
@@ -251,7 +290,7 @@ function SetupConexionPage() {
           <p className="mt-2 text-sm font-semibold">
             {status?.operationalReady
               ? "✅ Instalación completa y conexión de ventas verificada."
-              : "⚠️ No registrar ventas reales hasta completar esta conexión."}
+              : "⚠️ No registrar ventas reales hasta completar la conexión propia de esta empresa."}
           </p>
         </section>
       </main>
