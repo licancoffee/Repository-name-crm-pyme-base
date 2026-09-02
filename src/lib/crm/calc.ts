@@ -361,8 +361,11 @@ export function whatsappText(
   const company =
     clientConfig.company;
 
+  const companyName =
+    company.name.toUpperCase();
+
   return [
-    `*${company.name.toUpperCase()}*`,
+    `*${companyName}*`,
     "*COMPROBANTE DE COMPRA*",
     "",
 
@@ -413,17 +416,17 @@ export function whatsappText(
       : "",
 
     "",
-    "✅ Compra registrada correctamente",
+    "Compra registrada correctamente",
     "",
 
-    `Gracias por preferir *${company.name}*.`,
+    `Gracias por preferir *${companyName}*.`,
 
     company.website
-      ? `🌐 ${company.website}`
+      ? `Web: ${company.website}`
       : "",
 
     company.phone
-      ? `📱 ${company.phone}`
+      ? `Tel: ${company.phone}`
       : "",
   ]
     .filter(Boolean)
