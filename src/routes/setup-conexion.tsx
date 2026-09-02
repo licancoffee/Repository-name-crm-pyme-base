@@ -14,8 +14,13 @@ import {
   Link2,
   Loader2,
   RefreshCw,
+  Save,
   ShieldCheck,
 } from "lucide-react";
+
+import {
+  Input,
+} from "@/components/ui/input";
 
 export const Route =
   createFileRoute(
@@ -62,6 +67,18 @@ function SetupConexionPage() {
     useState(true);
 
   const [error, setError] =
+    useState("");
+
+  const [url, setUrl] =
+    useState("");
+
+  const [token, setToken] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [saveMessage, setSaveMessage] =
     useState("");
 
   async function refresh() {
@@ -118,6 +135,74 @@ function SetupConexionPage() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveConnection() {
+    const clientId =
+      getInstallationClientId();
+
+    if (!clientId) {
+      setSaveMessage(
+        "No se pudo determinar el CLIENT_ID de esta instalación.",
+      );
+      return;
+    }
+
+    if (!url.trim() || !token.trim()) {
+      setSaveMessage(
+        "Ingresa la URL /exec y el token operativo.",
+      );
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/setup-connection",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              clientId,
+              url:
+                url.trim(),
+              token:
+                token.trim(),
+            }),
+          },
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok || data?.ok !== true) {
+        throw new Error(
+          data?.message ||
+            "No fue posible guardar la conexión.",
+        );
+      }
+
+      setToken("");
+      setSaveMessage(
+        "Conexión guardada y verificada.",
+      );
+
+      await refresh();
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error
+          ? err.message
+          : "No fue posible guardar la conexión.",
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -227,6 +312,78 @@ function SetupConexionPage() {
           </div>
         </section>
 
+        {!ready && (
+          <section className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h2 className="font-semibold">
+              Configurar backend de esta empresa
+            </h2>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              La URL y el token se verifican en el servidor. El token no se vuelve a mostrar después de guardarlo.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">
+                  URL de Apps Script /exec
+                </span>
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(event) =>
+                    setUrl(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  autoComplete="off"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">
+                  CRM API Token
+                </span>
+                <Input
+                  type="password"
+                  value={token}
+                  onChange={(event) =>
+                    setToken(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="Token privado de esta empresa"
+                  autoComplete="new-password"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void saveConnection()
+                }
+                disabled={saving}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {saving
+                  ? "Verificando..."
+                  : "Guardar y verificar"}
+              </button>
+
+              {saveMessage && (
+                <p className="text-sm text-muted-foreground">
+                  {saveMessage}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className="grid gap-4 sm:grid-cols-2">
           <CheckCard
             label="ERP_APPS_SCRIPT_URL"
@@ -270,7 +427,7 @@ function SetupConexionPage() {
                 Regla de seguridad
               </h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Una empresa nueva no puede reutilizar silenciosamente la conexión operativa de otro CLIENT_ID. Cada instalación debe tener su propio backend operativo.
+                Una empresa nueva no puede reutilizar silenciosamente la conexión operativa de otro CLIENT_ID. Antes de guardar, el instalador comprueba que el backend responda y que pertenezca exactamente a esta empresa.
               </p>
             </div>
           </div>
@@ -292,6 +449,15 @@ function SetupConexionPage() {
               ? "✅ Instalación completa y conexión de ventas verificada."
               : "⚠️ No registrar ventas reales hasta completar la conexión propia de esta empresa."}
           </p>
+
+          {status?.operationalReady && clientId && (
+            <a
+              href={`/?clientId=${encodeURIComponent(clientId)}`}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
+            >
+              Abrir CRM de esta empresa
+            </a>
+          )}
         </section>
       </main>
     </div>
