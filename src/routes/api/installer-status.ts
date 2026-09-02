@@ -36,9 +36,26 @@ function jsonResponse(
   );
 }
 
-async function handleGet() {
+async function handleGet(
+  request: Request,
+) {
+  const requestUrl =
+    new URL(request.url);
+
+  const requestedClientId =
+    requestUrl.searchParams
+      .get("clientId")
+      ?.trim() || "";
+
+  const clientId =
+    requestedClientId ||
+    process.env.CLIENT_ID ||
+    "";
+
   const result = {
     ok: true,
+    requestedClientId:
+      clientId,
     config: {
       checked: false,
       completed: false,
@@ -74,7 +91,9 @@ async function handleGet() {
 
   try {
     const config =
-      await loadRemoteClientConfig();
+      await loadRemoteClientConfig(
+        clientId || undefined,
+      );
 
     result.config.checked = true;
     result.config.completed =
@@ -100,7 +119,9 @@ async function handleGet() {
 
   try {
     const products =
-      await readInstalledProducts();
+      await readInstalledProducts(
+        clientId || undefined,
+      );
 
     result.products.checked = true;
     result.products.count =
@@ -117,7 +138,9 @@ async function handleGet() {
 
   try {
     const customers =
-      await readInstalledCustomers();
+      await readInstalledCustomers(
+        clientId || undefined,
+      );
 
     result.customers.checked = true;
     result.customers.count =
@@ -140,7 +163,9 @@ async function handleGet() {
   }
 
   const connection =
-    await checkErpConnection();
+    await checkErpConnection(
+      clientId || undefined,
+    );
 
   result.connection = {
     checked: true,
@@ -180,8 +205,8 @@ export const Route =
   )({
     server: {
       handlers: {
-        GET: () =>
-          handleGet(),
+        GET: ({ request }) =>
+          handleGet(request),
       },
     },
   });
