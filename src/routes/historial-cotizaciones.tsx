@@ -25,7 +25,7 @@ import {
 
 import { clp, qtyFmt } from "@/lib/crm/format";
 import { netCostForFormat } from "@/lib/crm/calc";
-import { useDB } from "@/lib/crm/store";
+import { useDB, visibleSales } from "@/lib/crm/store";
 
 import {
   listarCotizaciones,
@@ -193,6 +193,7 @@ function quoteDateLabel(
 function HistorialCotizaciones() {
   const db = useDB();
   const navigate = useNavigate();
+  const sales = visibleSales(db);
 
   const [cotizaciones, setCotizaciones] =
     useState<CotizacionHistorial[]>([]);
@@ -319,6 +320,15 @@ function HistorialCotizaciones() {
       ],
     );
 
+
+  function saleStatusForQuote(cot) {
+    if (!cot?.ventaId) {
+      return "";
+    }
+
+    const sale = sales.find((item) => item.id === cot.ventaId);
+    return String(sale?.status || "").toUpperCase();
+  }
 
   function findCustomer(
     cot: CotizacionHistorial,
@@ -759,8 +769,9 @@ function HistorialCotizaciones() {
 
                     {cot.ventaId && (
                       <p className="text-xs text-muted-foreground">
-                        Venta:{" "}
+                        Venta asociada:{" "}
                         {cot.ventaId}
+                        {saleStatusForQuote(cot) === "ANULADA" ? " · ANULADA" : ""}
                       </p>
                     )}
                   </div>

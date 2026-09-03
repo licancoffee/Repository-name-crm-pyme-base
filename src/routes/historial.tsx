@@ -67,6 +67,19 @@ export const Route = createFileRoute("/historial")({
   component: Historial,
 });
 
+function cleanSaleNote(note) {
+  const value = String(note || "").trim();
+
+  if (!value) {
+    return "";
+  }
+
+  return value.replace(
+    /^(Origen cotización\s+(COT-[^·]+))\s*·\s*Cotización\s+\2$/i,
+    "$1",
+  );
+}
+
 function Historial() {
   const db = useDB();
 
@@ -363,9 +376,7 @@ function Historial() {
 
                     {sale.note && (
                       <p className="mt-3 rounded-lg bg-muted p-2 text-sm italic">
-                        {
-                          sale.note
-                        }
+                        {cleanSaleNote(sale.note)}
                       </p>
                     )}
 

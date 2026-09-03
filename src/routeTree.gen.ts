@@ -14,16 +14,24 @@ import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CotizacionesRouteImport } from './routes/cotizaciones'
 import { Route as HistorialRouteImport } from './routes/historial'
 import { Route as HistorialCotizacionesRouteImport } from './routes/historial-cotizaciones'
+import { Route as InstaladorRouteImport } from './routes/instalador'
 import { Route as InventarioRouteImport } from './routes/inventario'
 import { Route as KaizenRouteImport } from './routes/kaizen'
 import { Route as NuevaCotizacionRouteImport } from './routes/nueva-cotizacion'
 import { Route as NuevaVentaRouteImport } from './routes/nueva-venta'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SetupClientesRouteImport } from './routes/setup-clientes'
+import { Route as SetupConexionRouteImport } from './routes/setup-conexion'
 import { Route as SetupProductosRouteImport } from './routes/setup-productos'
 import { Route as ApiClientConfigRouteImport } from './routes/api/client-config'
+import { Route as ApiInstallerStatusRouteImport } from './routes/api/installer-status'
+import { Route as ApiMigrateOperationalConnectionRouteImport } from './routes/api/migrate-operational-connection'
+import { Route as ApiRuntimeBootstrapRouteImport } from './routes/api/runtime-bootstrap'
 import { Route as ApiSetupRouteImport } from './routes/api/setup'
+import { Route as ApiSetupClientContextRouteImport } from './routes/api/setup-client-context'
+import { Route as ApiSetupConnectionRouteImport } from './routes/api/setup-connection'
 import { Route as ApiSetupCustomersRouteImport } from './routes/api/setup-customers'
+import { Route as ApiSetupOperationalConnectionRouteImport } from './routes/api/setup-operational-connection'
 import { Route as ApiSetupProductsRouteImport } from './routes/api/setup-products'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp/webhook'
 
@@ -50,6 +58,11 @@ const HistorialRoute = HistorialRouteImport.update({
 const HistorialCotizacionesRoute = HistorialCotizacionesRouteImport.update({
   id: '/historial-cotizaciones',
   path: '/historial-cotizaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstaladorRoute = InstaladorRouteImport.update({
+  id: '/instalador',
+  path: '/instalador',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventarioRoute = InventarioRouteImport.update({
@@ -82,6 +95,11 @@ const SetupClientesRoute = SetupClientesRouteImport.update({
   path: '/setup-clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SetupConexionRoute = SetupConexionRouteImport.update({
+  id: '/setup-conexion',
+  path: '/setup-conexion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupProductosRoute = SetupProductosRouteImport.update({
   id: '/setup-productos',
   path: '/setup-productos',
@@ -92,9 +110,35 @@ const ApiClientConfigRoute = ApiClientConfigRouteImport.update({
   path: '/api/client-config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInstallerStatusRoute = ApiInstallerStatusRouteImport.update({
+  id: '/api/installer-status',
+  path: '/api/installer-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMigrateOperationalConnectionRoute =
+  ApiMigrateOperationalConnectionRouteImport.update({
+    id: '/api/migrate-operational-connection',
+    path: '/api/migrate-operational-connection',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiRuntimeBootstrapRoute = ApiRuntimeBootstrapRouteImport.update({
+  id: '/api/runtime-bootstrap',
+  path: '/api/runtime-bootstrap',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSetupRoute = ApiSetupRouteImport.update({
   id: '/api/setup',
   path: '/api/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupClientContextRoute = ApiSetupClientContextRouteImport.update({
+  id: '/api/setup-client-context',
+  path: '/api/setup-client-context',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupConnectionRoute = ApiSetupConnectionRouteImport.update({
+  id: '/api/setup-connection',
+  path: '/api/setup-connection',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupCustomersRoute = ApiSetupCustomersRouteImport.update({
@@ -102,6 +146,12 @@ const ApiSetupCustomersRoute = ApiSetupCustomersRouteImport.update({
   path: '/api/setup-customers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSetupOperationalConnectionRoute =
+  ApiSetupOperationalConnectionRouteImport.update({
+    id: '/api/setup-operational-connection',
+    path: '/api/setup-operational-connection',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiSetupProductsRoute = ApiSetupProductsRouteImport.update({
   id: '/api/setup-products',
   path: '/api/setup-products',
@@ -119,16 +169,24 @@ export interface FileRoutesByFullPath {
   '/cotizaciones': typeof CotizacionesRoute
   '/historial': typeof HistorialRoute
   '/historial-cotizaciones': typeof HistorialCotizacionesRoute
+  '/instalador': typeof InstaladorRoute
   '/inventario': typeof InventarioRoute
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
   '/setup': typeof SetupRoute
   '/setup-clientes': typeof SetupClientesRoute
+  '/setup-conexion': typeof SetupConexionRoute
   '/setup-productos': typeof SetupProductosRoute
   '/api/client-config': typeof ApiClientConfigRoute
+  '/api/installer-status': typeof ApiInstallerStatusRoute
+  '/api/migrate-operational-connection': typeof ApiMigrateOperationalConnectionRoute
+  '/api/runtime-bootstrap': typeof ApiRuntimeBootstrapRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/setup-client-context': typeof ApiSetupClientContextRoute
+  '/api/setup-connection': typeof ApiSetupConnectionRoute
   '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-operational-connection': typeof ApiSetupOperationalConnectionRoute
   '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
@@ -138,16 +196,24 @@ export interface FileRoutesByTo {
   '/cotizaciones': typeof CotizacionesRoute
   '/historial': typeof HistorialRoute
   '/historial-cotizaciones': typeof HistorialCotizacionesRoute
+  '/instalador': typeof InstaladorRoute
   '/inventario': typeof InventarioRoute
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
   '/setup': typeof SetupRoute
   '/setup-clientes': typeof SetupClientesRoute
+  '/setup-conexion': typeof SetupConexionRoute
   '/setup-productos': typeof SetupProductosRoute
   '/api/client-config': typeof ApiClientConfigRoute
+  '/api/installer-status': typeof ApiInstallerStatusRoute
+  '/api/migrate-operational-connection': typeof ApiMigrateOperationalConnectionRoute
+  '/api/runtime-bootstrap': typeof ApiRuntimeBootstrapRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/setup-client-context': typeof ApiSetupClientContextRoute
+  '/api/setup-connection': typeof ApiSetupConnectionRoute
   '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-operational-connection': typeof ApiSetupOperationalConnectionRoute
   '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
@@ -158,16 +224,24 @@ export interface FileRoutesById {
   '/cotizaciones': typeof CotizacionesRoute
   '/historial': typeof HistorialRoute
   '/historial-cotizaciones': typeof HistorialCotizacionesRoute
+  '/instalador': typeof InstaladorRoute
   '/inventario': typeof InventarioRoute
   '/kaizen': typeof KaizenRoute
   '/nueva-cotizacion': typeof NuevaCotizacionRoute
   '/nueva-venta': typeof NuevaVentaRoute
   '/setup': typeof SetupRoute
   '/setup-clientes': typeof SetupClientesRoute
+  '/setup-conexion': typeof SetupConexionRoute
   '/setup-productos': typeof SetupProductosRoute
   '/api/client-config': typeof ApiClientConfigRoute
+  '/api/installer-status': typeof ApiInstallerStatusRoute
+  '/api/migrate-operational-connection': typeof ApiMigrateOperationalConnectionRoute
+  '/api/runtime-bootstrap': typeof ApiRuntimeBootstrapRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/setup-client-context': typeof ApiSetupClientContextRoute
+  '/api/setup-connection': typeof ApiSetupConnectionRoute
   '/api/setup-customers': typeof ApiSetupCustomersRoute
+  '/api/setup-operational-connection': typeof ApiSetupOperationalConnectionRoute
   '/api/setup-products': typeof ApiSetupProductsRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
 }
@@ -179,16 +253,24 @@ export interface FileRouteTypes {
     | '/cotizaciones'
     | '/historial'
     | '/historial-cotizaciones'
+    | '/instalador'
     | '/inventario'
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
     | '/setup'
     | '/setup-clientes'
+    | '/setup-conexion'
     | '/setup-productos'
     | '/api/client-config'
+    | '/api/installer-status'
+    | '/api/migrate-operational-connection'
+    | '/api/runtime-bootstrap'
     | '/api/setup'
+    | '/api/setup-client-context'
+    | '/api/setup-connection'
     | '/api/setup-customers'
+    | '/api/setup-operational-connection'
     | '/api/setup-products'
     | '/api/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -198,16 +280,24 @@ export interface FileRouteTypes {
     | '/cotizaciones'
     | '/historial'
     | '/historial-cotizaciones'
+    | '/instalador'
     | '/inventario'
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
     | '/setup'
     | '/setup-clientes'
+    | '/setup-conexion'
     | '/setup-productos'
     | '/api/client-config'
+    | '/api/installer-status'
+    | '/api/migrate-operational-connection'
+    | '/api/runtime-bootstrap'
     | '/api/setup'
+    | '/api/setup-client-context'
+    | '/api/setup-connection'
     | '/api/setup-customers'
+    | '/api/setup-operational-connection'
     | '/api/setup-products'
     | '/api/whatsapp/webhook'
   id:
@@ -217,16 +307,24 @@ export interface FileRouteTypes {
     | '/cotizaciones'
     | '/historial'
     | '/historial-cotizaciones'
+    | '/instalador'
     | '/inventario'
     | '/kaizen'
     | '/nueva-cotizacion'
     | '/nueva-venta'
     | '/setup'
     | '/setup-clientes'
+    | '/setup-conexion'
     | '/setup-productos'
     | '/api/client-config'
+    | '/api/installer-status'
+    | '/api/migrate-operational-connection'
+    | '/api/runtime-bootstrap'
     | '/api/setup'
+    | '/api/setup-client-context'
+    | '/api/setup-connection'
     | '/api/setup-customers'
+    | '/api/setup-operational-connection'
     | '/api/setup-products'
     | '/api/whatsapp/webhook'
   fileRoutesById: FileRoutesById
@@ -237,16 +335,24 @@ export interface RootRouteChildren {
   CotizacionesRoute: typeof CotizacionesRoute
   HistorialRoute: typeof HistorialRoute
   HistorialCotizacionesRoute: typeof HistorialCotizacionesRoute
+  InstaladorRoute: typeof InstaladorRoute
   InventarioRoute: typeof InventarioRoute
   KaizenRoute: typeof KaizenRoute
   NuevaCotizacionRoute: typeof NuevaCotizacionRoute
   NuevaVentaRoute: typeof NuevaVentaRoute
   SetupRoute: typeof SetupRoute
   SetupClientesRoute: typeof SetupClientesRoute
+  SetupConexionRoute: typeof SetupConexionRoute
   SetupProductosRoute: typeof SetupProductosRoute
   ApiClientConfigRoute: typeof ApiClientConfigRoute
+  ApiInstallerStatusRoute: typeof ApiInstallerStatusRoute
+  ApiMigrateOperationalConnectionRoute: typeof ApiMigrateOperationalConnectionRoute
+  ApiRuntimeBootstrapRoute: typeof ApiRuntimeBootstrapRoute
   ApiSetupRoute: typeof ApiSetupRoute
+  ApiSetupClientContextRoute: typeof ApiSetupClientContextRoute
+  ApiSetupConnectionRoute: typeof ApiSetupConnectionRoute
   ApiSetupCustomersRoute: typeof ApiSetupCustomersRoute
+  ApiSetupOperationalConnectionRoute: typeof ApiSetupOperationalConnectionRoute
   ApiSetupProductsRoute: typeof ApiSetupProductsRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
 }
@@ -286,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/historial-cotizaciones'
       fullPath: '/historial-cotizaciones'
       preLoaderRoute: typeof HistorialCotizacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instalador': {
+      id: '/instalador'
+      path: '/instalador'
+      fullPath: '/instalador'
+      preLoaderRoute: typeof InstaladorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventario': {
@@ -330,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SetupClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/setup-conexion': {
+      id: '/setup-conexion'
+      path: '/setup-conexion'
+      fullPath: '/setup-conexion'
+      preLoaderRoute: typeof SetupConexionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup-productos': {
       id: '/setup-productos'
       path: '/setup-productos'
@@ -344,6 +464,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiClientConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/installer-status': {
+      id: '/api/installer-status'
+      path: '/api/installer-status'
+      fullPath: '/api/installer-status'
+      preLoaderRoute: typeof ApiInstallerStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/migrate-operational-connection': {
+      id: '/api/migrate-operational-connection'
+      path: '/api/migrate-operational-connection'
+      fullPath: '/api/migrate-operational-connection'
+      preLoaderRoute: typeof ApiMigrateOperationalConnectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/runtime-bootstrap': {
+      id: '/api/runtime-bootstrap'
+      path: '/api/runtime-bootstrap'
+      fullPath: '/api/runtime-bootstrap'
+      preLoaderRoute: typeof ApiRuntimeBootstrapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/setup': {
       id: '/api/setup'
       path: '/api/setup'
@@ -351,11 +492,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/setup-client-context': {
+      id: '/api/setup-client-context'
+      path: '/api/setup-client-context'
+      fullPath: '/api/setup-client-context'
+      preLoaderRoute: typeof ApiSetupClientContextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup-connection': {
+      id: '/api/setup-connection'
+      path: '/api/setup-connection'
+      fullPath: '/api/setup-connection'
+      preLoaderRoute: typeof ApiSetupConnectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/setup-customers': {
       id: '/api/setup-customers'
       path: '/api/setup-customers'
       fullPath: '/api/setup-customers'
       preLoaderRoute: typeof ApiSetupCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup-operational-connection': {
+      id: '/api/setup-operational-connection'
+      path: '/api/setup-operational-connection'
+      fullPath: '/api/setup-operational-connection'
+      preLoaderRoute: typeof ApiSetupOperationalConnectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/setup-products': {
@@ -381,16 +543,24 @@ const rootRouteChildren: RootRouteChildren = {
   CotizacionesRoute: CotizacionesRoute,
   HistorialRoute: HistorialRoute,
   HistorialCotizacionesRoute: HistorialCotizacionesRoute,
+  InstaladorRoute: InstaladorRoute,
   InventarioRoute: InventarioRoute,
   KaizenRoute: KaizenRoute,
   NuevaCotizacionRoute: NuevaCotizacionRoute,
   NuevaVentaRoute: NuevaVentaRoute,
   SetupRoute: SetupRoute,
   SetupClientesRoute: SetupClientesRoute,
+  SetupConexionRoute: SetupConexionRoute,
   SetupProductosRoute: SetupProductosRoute,
   ApiClientConfigRoute: ApiClientConfigRoute,
+  ApiInstallerStatusRoute: ApiInstallerStatusRoute,
+  ApiMigrateOperationalConnectionRoute: ApiMigrateOperationalConnectionRoute,
+  ApiRuntimeBootstrapRoute: ApiRuntimeBootstrapRoute,
   ApiSetupRoute: ApiSetupRoute,
+  ApiSetupClientContextRoute: ApiSetupClientContextRoute,
+  ApiSetupConnectionRoute: ApiSetupConnectionRoute,
   ApiSetupCustomersRoute: ApiSetupCustomersRoute,
+  ApiSetupOperationalConnectionRoute: ApiSetupOperationalConnectionRoute,
   ApiSetupProductsRoute: ApiSetupProductsRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
 }
