@@ -26,7 +26,7 @@ import {
 
 import {
   consultarStock,
-} from "@/lib/kaizen/tools";
+} from "@/lib/Kaizen/tools";
 
 export const Route =
   createFileRoute(
