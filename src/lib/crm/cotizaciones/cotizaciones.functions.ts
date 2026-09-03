@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
+
+import {
   crearCotizacionEnAppsScript,
   listarCotizacionesEnAppsScript,
   buscarCotizacionEnAppsScript,
@@ -19,94 +23,179 @@ import type {
 } from "./appsScript.server";
 
 
+type ClientContext = {
+  clientId: string;
+};
+
+function requireActiveClientId() {
+  const clientId =
+    String(
+      getActiveClientId() || "",
+    ).trim();
+
+  if (!clientId) {
+    throw new Error(
+      "No se pudo determinar el CLIENT_ID activo.",
+    );
+  }
+
+  return clientId;
+}
+
+
 /*********************************************************
  * CREAR COTIZACIÓN
  *********************************************************/
 
-export const crearCotizacion = createServerFn({
+const crearCotizacionServer = createServerFn({
   method: "POST",
 })
   .validator(
-    (payload: CrearCotizacionPayload) =>
-      payload,
+    (input: {
+      clientId: string;
+      payload: CrearCotizacionPayload;
+    }) => input,
   )
   .handler(
-    async ({
-      data,
-    }): Promise<CrearCotizacionResult> => {
+    async ({ data }): Promise<CrearCotizacionResult> => {
       return crearCotizacionEnAppsScript(
-        data,
+        data.payload,
+        data.clientId,
       );
     },
   );
+
+export async function crearCotizacion(
+  input: {
+    data: CrearCotizacionPayload;
+  },
+): Promise<CrearCotizacionResult> {
+  return crearCotizacionServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+      payload: input.data,
+    },
+  });
+}
 
 
 /*********************************************************
  * LISTAR COTIZACIONES
  *********************************************************/
 
-export const listarCotizaciones = createServerFn({
+const listarCotizacionesServer = createServerFn({
   method: "POST",
 })
   .validator(
-    (
-      payload: {
-        action?: string;
-      } = {},
-    ) => payload,
+    (input: ClientContext) =>
+      input,
   )
   .handler(
-    async (): Promise<ListarCotizacionesResult> => {
-      return listarCotizacionesEnAppsScript();
+    async ({ data }): Promise<ListarCotizacionesResult> => {
+      return listarCotizacionesEnAppsScript(
+        data.clientId,
+      );
     },
   );
+
+export async function listarCotizaciones(
+  _input: {
+    data?: {
+      action?: string;
+    };
+  } = {},
+): Promise<ListarCotizacionesResult> {
+  return listarCotizacionesServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+    },
+  });
+}
 
 
 /*********************************************************
  * BUSCAR COTIZACIÓN
  *********************************************************/
 
-export const buscarCotizacion = createServerFn({
+const buscarCotizacionServer = createServerFn({
   method: "POST",
 })
   .validator(
-    (payload: {
+    (input: {
+      clientId: string;
       numero: string;
-    }) => payload,
+    }) => input,
   )
   .handler(
-    async ({
-      data,
-    }): Promise<BuscarCotizacionResult> => {
+    async ({ data }): Promise<BuscarCotizacionResult> => {
       return buscarCotizacionEnAppsScript(
         data.numero,
+        data.clientId,
       );
     },
   );
+
+export async function buscarCotizacion(
+  input: {
+    data: {
+      numero: string;
+    };
+  },
+): Promise<BuscarCotizacionResult> {
+  return buscarCotizacionServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+      numero:
+        input.data.numero,
+    },
+  });
+}
 
 
 /*********************************************************
  * MARCAR COTIZACIÓN COMO CONVERTIDA
  *********************************************************/
 
-export const marcarCotizacionConvertida =
+const marcarCotizacionConvertidaServer =
   createServerFn({
     method: "POST",
   })
     .validator(
-      (payload: {
+      (input: {
+        clientId: string;
         numero: string;
         ventaId: string;
-      }) => payload,
+      }) => input,
     )
     .handler(
-      async ({
-        data,
-      }): Promise<MarcarCotizacionConvertidaResult> => {
+      async ({ data }): Promise<MarcarCotizacionConvertidaResult> => {
         return marcarCotizacionConvertidaEnAppsScript(
           data.numero,
           data.ventaId,
+          data.clientId,
         );
       },
     );
-    
+
+export async function marcarCotizacionConvertida(
+  input: {
+    data: {
+      numero: string;
+      ventaId: string;
+    };
+  },
+): Promise<MarcarCotizacionConvertidaResult> {
+  return marcarCotizacionConvertidaServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+      numero:
+        input.data.numero,
+      ventaId:
+        input.data.ventaId,
+    },
+  });
+}
