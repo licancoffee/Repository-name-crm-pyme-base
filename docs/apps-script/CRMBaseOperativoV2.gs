@@ -1,4 +1,4 @@
-const CRM_BASE_OPERATIVO_VERSION = "1.1.0";
+const CRM_BASE_OPERATIVO_VERSION = "1.2.0";
 
 const CRM_BASE_SHEETS = {
   VENTAS: "CRM_VENTAS",
@@ -46,7 +46,6 @@ function doGet(e) {
   try {
     const action = String((e && e.parameter && e.parameter.action) || "ping").trim();
     const token = String((e && e.parameter && e.parameter.token) || "");
-
     validarTokenOperativo_(token);
     asegurarEstructuraOperativa_();
 
@@ -83,11 +82,14 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const payload = parsePayloadOperativo_(e);
+    const rawPayload = parsePayloadOperativo_(e);
+    validarTokenOperativo_(rawPayload.token);
 
-    validarTokenOperativo_(payload.token);
+    // Desde este punto ningún handler recibe la credencial.
+    // Así SALE_JSON y QUOTE_JSON nunca pueden persistir CRM_API_TOKEN.
+    const payload = sanitizarPayloadOperativo_(rawPayload);
+
     asegurarEstructuraOperativa_();
-
     const action = String(payload.action || "").trim();
 
     if (action === "ping") {
@@ -98,38 +100,22 @@ function doPost(e) {
         mensaje: "Conexión operativa verificada.",
       });
     }
-
-    if (action === "registrarVenta") {
-      return jsonOperativo_(registrarVentaOperativa_(payload));
-    }
-
-    if (action === "anularVenta") {
-      return jsonOperativo_(anularVentaOperativa_(payload));
-    }
-
-    if (action === "crearCotizacion") {
-      return jsonOperativo_(crearCotizacionOperativa_(payload));
-    }
-
+    if (action === "registrarVenta") return jsonOperativo_(registrarVentaOperativa_(payload));
+    if (action === "anularVenta") return jsonOperativo_(anularVentaOperativa_(payload));
+    if (action === "crearCotizacion") return jsonOperativo_(crearCotizacionOperativa_(payload));
     if (action === "listarCotizaciones") {
-      return jsonOperativo_({
-        ok: true,
-        data: listarCotizacionesOperativas_(),
-      });
+      return jsonOperativo_({ ok: true, data: listarCotizacionesOperativas_() });
     }
-
     if (action === "buscarCotizacion") {
       const cotizacion = buscarCotizacionOperativa_(payload.numero);
-      if (!cotizacion) {
-        return jsonOperativo_({
-          ok: false,
-          error: "COTIZACION_NO_ENCONTRADA",
-          mensaje: "No se encontró la cotización " + String(payload.numero || "") + ".",
-        });
-      }
-      return jsonOperativo_({ ok: true, data: cotizacion });
+      return cotizacion
+        ? jsonOperativo_({ ok: true, data: cotizacion })
+        : jsonOperativo_({
+            ok: false,
+            error: "COTIZACION_NO_ENCONTRADA",
+            mensaje: "No se encontró la cotización " + String(payload.numero || "") + ".",
+          });
     }
-
     if (action === "marcarCotizacionConvertida") {
       return jsonOperativo_(marcarCotizacionConvertidaOperativa_(payload));
     }
@@ -145,23 +131,53 @@ function doPost(e) {
 }
 
 /* =========================================================
+ * SEGURIDAD DE PERSISTENCIA
+ * ======================================================= */
+
+function sanitizarPayloadOperativo_(value) {
+  if (Array.isArray(value)) {
+    return value.map(sanitizarPayloadOperativo_);
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    Object.keys(value).forEach(function(key) {
+      const normalized = String(key || "").toLowerCase();
+      if (
+        normalized === "token" ||
+        normalized === "crm_api_token" ||
+        normalized === "authorization" ||
+        normalized === "apikey" ||
+        normalized === "api_key"
+      ) return;
+      out[key] = sanitizarPayloadOperativo_(value[key]);
+    });
+    return out;
+  }
+  return value;
+}
+
+function textoSeguroHojaOperativa_(value) {
+  const text = String(value == null ? "" : value);
+  if (!text) return "";
+  // Evita que Sheets interprete teléfonos +569..., =..., -... o @... como fórmula.
+  return /^[=+\-@]/.test(text) ? "'" + text : text;
+}
+
+/* =========================================================
  * VENTAS
  * ======================================================= */
 
 function registrarVentaOperativa_(payload) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
-
   try {
     const ventaId = String(payload.ventaId || "").trim();
     if (!ventaId) throw new Error("VENTA_ID_REQUERIDO");
-
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("VENTA_SIN_ITEMS");
 
     const clientId = getClientIdOperativo_();
     const ventaExistente = buscarVentaOperativa_(ventaId);
-
     if (ventaExistente) {
       return {
         ok: true,
@@ -182,15 +198,11 @@ function registrarVentaOperativa_(payload) {
       const codigo = String(item.codigo || "").trim();
       const producto = String(item.producto || codigo || "Producto").trim();
       const unidades = Number(item.unidades || 0);
-
       if (!codigo) throw new Error("ITEM_SIN_CODIGO");
-      if (!Number.isFinite(unidades) || unidades <= 0) {
-        throw new Error("UNIDADES_INVALIDAS:" + codigo);
-      }
+      if (!Number.isFinite(unidades) || unidades <= 0) throw new Error("UNIDADES_INVALIDAS:" + codigo);
 
       const inv = inventario[codigo];
       if (!inv) throw new Error("PRODUCTO_SIN_INVENTARIO:" + codigo);
-
       const stockAnterior = Number(inv.stockActual || 0);
       const stockNuevo = stockAnterior - unidades;
       if (stockNuevo < 0) throw new Error("STOCK_INSUFICIENTE:" + producto);
@@ -202,7 +214,6 @@ function registrarVentaOperativa_(payload) {
         stockAnterior: stockAnterior,
         stockNuevo: stockNuevo,
       });
-
       inventarioActualizado.push({
         codigo: codigo,
         producto: producto,
@@ -214,20 +225,19 @@ function registrarVentaOperativa_(payload) {
     const now = new Date();
     const fecha = payload.fecha ? new Date(payload.fecha) : now;
     const cliente = payload.cliente || {};
-    const total = items.reduce(function(sum, item) {
-      return sum + Number(item.subtotal || 0);
-    }, 0);
+    const total = items.reduce(function(sum, item) { return sum + Number(item.subtotal || 0); }, 0);
+    const ventasSheet = getSheetOperativa_(CRM_BASE_SHEETS.VENTAS);
 
-    getSheetOperativa_(CRM_BASE_SHEETS.VENTAS).appendRow([
+    ventasSheet.appendRow([
       clientId,
       ventaId,
       fecha,
-      String(cliente.nombre || "Sin cliente"),
-      String(cliente.telefono || ""),
-      String(cliente.direccion || ""),
-      String(cliente.tipoCliente || ""),
-      String(payload.formaPago || ""),
-      String(payload.observacion || ""),
+      textoSeguroHojaOperativa_(cliente.nombre || "Sin cliente"),
+      textoSeguroHojaOperativa_(cliente.telefono || ""),
+      textoSeguroHojaOperativa_(cliente.direccion || ""),
+      textoSeguroHojaOperativa_(cliente.tipoCliente || ""),
+      textoSeguroHojaOperativa_(payload.formaPago || ""),
+      textoSeguroHojaOperativa_(payload.observacion || ""),
       "ACTIVA",
       total,
       JSON.stringify(payload),
@@ -240,9 +250,9 @@ function registrarVentaOperativa_(payload) {
       itemsSheet.appendRow([
         clientId,
         ventaId,
-        String(item.codigo || ""),
-        String(item.producto || ""),
-        String(item.formato || ""),
+        textoSeguroHojaOperativa_(item.codigo || ""),
+        textoSeguroHojaOperativa_(item.producto || ""),
+        textoSeguroHojaOperativa_(item.formato || ""),
         Number(item.cantidad || 0),
         Number(item.unidades || 0),
         Number(item.precioUnitario || 0),
@@ -286,14 +296,11 @@ function registrarVentaOperativa_(payload) {
 function anularVentaOperativa_(payload) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
-
   try {
     const ventaId = String(payload.ventaId || "").trim();
     if (!ventaId) throw new Error("VENTA_ID_REQUERIDO");
-
     const venta = buscarVentaOperativa_(ventaId);
     if (!venta) throw new Error("VENTA_NO_ENCONTRADA");
-
     if (venta.estado === "ANULADA") {
       return {
         ok: true,
@@ -309,14 +316,12 @@ function anularVentaOperativa_(payload) {
     const items = obtenerItemsVentaOperativa_(ventaId);
     const inventario = obtenerInventarioMapOperativo_();
     const now = new Date();
-
     items.forEach(function(item, index) {
       const codigo = String(item.codigo || "").trim();
       const unidades = Number(item.unidades || 0);
       const inv = inventario[codigo];
       const stockAnterior = inv ? Number(inv.stockActual || 0) : 0;
       const stockNuevo = stockAnterior + unidades;
-
       actualizarInventarioOperativo_(codigo, stockNuevo, now);
       registrarMovimientoOperativo_({
         movimientoId: ventaId + "-ANULA-" + String(index + 1),
@@ -331,9 +336,7 @@ function anularVentaOperativa_(payload) {
         observacion: "Reposición por anulación de venta",
       });
     });
-
     marcarVentaAnuladaOperativa_(ventaId, now);
-
     return {
       ok: true,
       data: {
@@ -350,19 +353,16 @@ function anularVentaOperativa_(payload) {
 
 /* =========================================================
  * COTIZACIONES
- * Una cotización NO modifica inventario.
  * ======================================================= */
 
 function crearCotizacionOperativa_(payload) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
-
   try {
     const clientId = getClientIdOperativo_();
     const cliente = payload.cliente || {};
     const items = Array.isArray(payload.items) ? payload.items : [];
     const requestId = String(payload.requestId || payload.numero || "").trim();
-
     if (!String(cliente.nombre || "").trim()) throw new Error("CLIENTE_REQUERIDO");
     if (!String(cliente.email || "").trim()) throw new Error("EMAIL_REQUERIDO");
     if (!items.length) throw new Error("COTIZACION_SIN_ITEMS");
@@ -383,7 +383,6 @@ function crearCotizacionOperativa_(payload) {
     const now = new Date();
     const numero = requestId || generarNumeroCotizacionOperativa_(now);
     const existente = buscarCotizacionOperativa_(numero);
-
     if (existente) {
       return {
         ok: true,
@@ -398,12 +397,8 @@ function crearCotizacionOperativa_(payload) {
     items.forEach(function(item) {
       const cantidad = Number(item.cantidad || 0);
       const precioUnitario = Number(item.precioUnitario || 0);
-      if (!Number.isFinite(cantidad) || cantidad <= 0) {
-        throw new Error("CANTIDAD_COTIZACION_INVALIDA");
-      }
-      if (!Number.isFinite(precioUnitario) || precioUnitario < 0) {
-        throw new Error("PRECIO_COTIZACION_INVALIDO");
-      }
+      if (!Number.isFinite(cantidad) || cantidad <= 0) throw new Error("CANTIDAD_COTIZACION_INVALIDA");
+      if (!Number.isFinite(precioUnitario) || precioUnitario < 0) throw new Error("PRECIO_COTIZACION_INVALIDO");
       subtotal += cantidad * precioUnitario;
     });
 
@@ -411,7 +406,6 @@ function crearCotizacionOperativa_(payload) {
     const total = Math.max(0, subtotal - descuento);
     const neto = total / 1.19;
     const iva = total - neto;
-
     const documento = generarDocumentoCotizacionOperativa_({
       numero: numero,
       fecha: now,
@@ -427,7 +421,6 @@ function crearCotizacionOperativa_(payload) {
 
     let estado = "GENERADA";
     let mensaje = "Cotización generada correctamente.";
-
     if (documento.pdfFile && String(cliente.email || "").trim()) {
       try {
         enviarCotizacionPorCorreoOperativa_({
@@ -450,19 +443,19 @@ function crearCotizacionOperativa_(payload) {
       numero,
       now,
       estado,
-      String(cliente.nombre || ""),
-      String(cliente.empresa || ""),
-      String(cliente.email || ""),
-      String(cliente.telefono || ""),
-      String(cliente.direccion || ""),
-      String(payload.formaPago || "Pendiente"),
+      textoSeguroHojaOperativa_(cliente.nombre || ""),
+      textoSeguroHojaOperativa_(cliente.empresa || ""),
+      textoSeguroHojaOperativa_(cliente.email || ""),
+      textoSeguroHojaOperativa_(cliente.telefono || ""),
+      textoSeguroHojaOperativa_(cliente.direccion || ""),
+      textoSeguroHojaOperativa_(payload.formaPago || "Pendiente"),
       descuento,
       neto,
       iva,
       total,
       documento.pdfUrl || "",
       documento.documentoUrl || "",
-      String(payload.observaciones || ""),
+      textoSeguroHojaOperativa_(payload.observaciones || ""),
       JSON.stringify(payload),
       "",
       "",
@@ -477,9 +470,9 @@ function crearCotizacionOperativa_(payload) {
       itemsSheet.appendRow([
         clientId,
         numero,
-        String(item.sku || ""),
-        String(item.producto || ""),
-        String(item.formato || ""),
+        textoSeguroHojaOperativa_(item.sku || ""),
+        textoSeguroHojaOperativa_(item.producto || ""),
+        textoSeguroHojaOperativa_(item.formato || ""),
         cantidad,
         precioUnitario,
         cantidad * precioUnitario,
@@ -508,67 +501,47 @@ function listarCotizacionesOperativas_() {
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.COTIZACIONES);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return [];
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   return values.slice(1)
-    .filter(function(row) {
-      return String(row[header.CLIENT_ID] || "") === clientId;
-    })
-    .map(function(row, index) {
-      return filaCotizacionAObjetoOperativo_(row, header, index + 2);
-    })
-    .sort(function(a, b) {
-      return new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime();
-    });
+    .filter(function(row) { return String(row[header.CLIENT_ID] || "") === clientId; })
+    .map(function(row, index) { return filaCotizacionAObjetoOperativo_(row, header, index + 2); })
+    .sort(function(a, b) { return new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime(); });
 }
 
 function buscarCotizacionOperativa_(numero) {
   const buscado = String(numero || "").trim().toUpperCase();
   if (!buscado) return null;
-
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.COTIZACIONES);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return null;
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   for (var i = 1; i < values.length; i += 1) {
     const row = values[i];
     if (
       String(row[header.CLIENT_ID] || "") === clientId &&
       String(row[header.NUMERO] || "").trim().toUpperCase() === buscado
-    ) {
-      return filaCotizacionAObjetoOperativo_(row, header, i + 1);
-    }
+    ) return filaCotizacionAObjetoOperativo_(row, header, i + 1);
   }
-
   return null;
 }
 
 function buscarCotizacionPorRequestIdOperativa_(requestId) {
   const buscado = String(requestId || "").trim();
   if (!buscado) return null;
-
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.COTIZACIONES);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return null;
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   for (var i = 1; i < values.length; i += 1) {
     const row = values[i];
     if (
       String(row[header.CLIENT_ID] || "") === clientId &&
       String(row[header.REQUEST_ID] || "") === buscado
-    ) {
-      return filaCotizacionAObjetoOperativo_(row, header, i + 1);
-    }
+    ) return filaCotizacionAObjetoOperativo_(row, header, i + 1);
   }
-
   return null;
 }
 
@@ -582,7 +555,7 @@ function filaCotizacionAObjetoOperativo_(row, header, rowNumber) {
     cliente: String(row[header.CLIENTE] || ""),
     empresa: String(row[header.EMPRESA] || ""),
     email: String(row[header.EMAIL] || ""),
-    telefono: String(row[header.TELEFONO] || ""),
+    telefono: normalizarTextoLeidoOperativo_(row[header.TELEFONO]),
     direccion: String(row[header.DIRECCION] || ""),
     formaPago: String(row[header.FORMA_PAGO] || ""),
     descuento: Number(row[header.DESCUENTO] || 0),
@@ -593,9 +566,7 @@ function filaCotizacionAObjetoOperativo_(row, header, rowNumber) {
     documentoUrl: String(row[header.DOCUMENTO_URL] || ""),
     observaciones: String(row[header.OBSERVACIONES] || ""),
     ventaId: String(row[header.VENTA_ID] || ""),
-    fechaConversion: row[header.FECHA_CONVERSION]
-      ? toIsoOperativo_(row[header.FECHA_CONVERSION])
-      : undefined,
+    fechaConversion: row[header.FECHA_CONVERSION] ? toIsoOperativo_(row[header.FECHA_CONVERSION]) : undefined,
     items: obtenerItemsCotizacionOperativa_(numero),
   };
 }
@@ -604,16 +575,11 @@ function obtenerItemsCotizacionOperativa_(numero) {
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.COTIZACIONES_ITEMS);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return [];
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   return values.slice(1)
     .filter(function(row) {
-      return (
-        String(row[header.CLIENT_ID] || "") === clientId &&
-        String(row[header.NUMERO] || "") === numero
-      );
+      return String(row[header.CLIENT_ID] || "") === clientId && String(row[header.NUMERO] || "") === numero;
     })
     .map(function(row) {
       return {
@@ -629,17 +595,13 @@ function obtenerItemsCotizacionOperativa_(numero) {
 function marcarCotizacionConvertidaOperativa_(payload) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
-
   try {
     const numero = String(payload.numero || "").trim().toUpperCase();
     const ventaId = String(payload.ventaId || "").trim();
-
     if (!numero) throw new Error("SIN_NUMERO");
     if (!ventaId) throw new Error("SIN_VENTA_ID");
-
     const cotizacion = buscarCotizacionOperativa_(numero);
     if (!cotizacion) throw new Error("COTIZACION_NO_ENCONTRADA");
-
     if (cotizacion.estado === "CONVERTIDA") {
       return {
         ok: true,
@@ -652,18 +614,13 @@ function marcarCotizacionConvertidaOperativa_(payload) {
         },
       };
     }
-
     const sheet = getSheetOperativa_(CRM_BASE_SHEETS.COTIZACIONES);
-    const header = headerMapOperativo_(
-      sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0],
-    );
+    const header = headerMapOperativo_(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]);
     const now = new Date();
-
     sheet.getRange(cotizacion.fila, header.ESTADO + 1).setValue("CONVERTIDA");
     sheet.getRange(cotizacion.fila, header.VENTA_ID + 1).setValue(ventaId);
     sheet.getRange(cotizacion.fila, header.FECHA_CONVERSION + 1).setValue(now);
     sheet.getRange(cotizacion.fila, header.UPDATED_AT + 1).setValue(now);
-
     return {
       ok: true,
       data: {
@@ -692,11 +649,8 @@ function generarDocumentoCotizacionOperativa_(data) {
     const companyName = String(company.name || company.legalName || "Empresa");
     const doc = DocumentApp.create("Cotización " + data.numero + " - " + companyName);
     const body = doc.getBody();
-
-    body.appendParagraph(companyName.toUpperCase())
-      .setHeading(DocumentApp.ParagraphHeading.HEADING1);
-    body.appendParagraph("COTIZACIÓN " + data.numero)
-      .setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    body.appendParagraph(companyName.toUpperCase()).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph("COTIZACIÓN " + data.numero).setHeading(DocumentApp.ParagraphHeading.HEADING2);
     body.appendParagraph("Fecha: " + Utilities.formatDate(data.fecha, Session.getScriptTimeZone() || "America/Santiago", "dd-MM-yyyy HH:mm"));
 
     const datosEmpresa = [
@@ -708,8 +662,7 @@ function generarDocumentoCotizacionOperativa_(data) {
     ].filter(String).join(" · ");
     if (datosEmpresa) body.appendParagraph(datosEmpresa);
 
-    body.appendParagraph("Cliente")
-      .setHeading(DocumentApp.ParagraphHeading.HEADING3);
+    body.appendParagraph("Cliente").setHeading(DocumentApp.ParagraphHeading.HEADING3);
     body.appendParagraph([
       data.cliente.nombre,
       data.cliente.empresa,
@@ -731,49 +684,33 @@ function generarDocumentoCotizacionOperativa_(data) {
       ]);
     });
     body.appendTable(tableData);
-
     body.appendParagraph("Subtotal: " + formatClpOperativo_(data.total + data.descuento));
     if (data.descuento > 0) body.appendParagraph("Descuento: -" + formatClpOperativo_(data.descuento));
     body.appendParagraph("TOTAL: " + formatClpOperativo_(data.total)).setBold(true);
     body.appendParagraph("Forma de pago: " + String(data.formaPago || "Pendiente"));
     if (data.observaciones) body.appendParagraph("Observaciones: " + data.observaciones);
     body.appendParagraph("Esta cotización no descuenta ni reserva stock hasta convertirse en venta.");
-
     doc.saveAndClose();
 
     const folder = getCotizacionesFolderOperativo_();
     const docFile = DriveApp.getFileById(doc.getId());
     docFile.moveTo(folder);
-
     const pdfBlob = docFile.getBlob().getAs(MimeType.PDF).setName("Cotizacion-" + data.numero + ".pdf");
     const pdfFile = folder.createFile(pdfBlob);
-
-    return {
-      documentoUrl: doc.getUrl(),
-      pdfUrl: pdfFile.getUrl(),
-      pdfFile: pdfFile,
-    };
+    return { documentoUrl: doc.getUrl(), pdfUrl: pdfFile.getUrl(), pdfFile: pdfFile };
   } catch (error) {
     console.error("Error generando documento de cotización", error);
-    return {
-      documentoUrl: "",
-      pdfUrl: "",
-      pdfFile: null,
-    };
+    return { documentoUrl: "", pdfUrl: "", pdfFile: null };
   }
 }
 
 function enviarCotizacionPorCorreoOperativa_(data) {
   const company = obtenerEmpresaInstaladaOperativa_();
   const companyName = String(company.name || company.legalName || "Empresa");
-
   MailApp.sendEmail({
     to: data.email,
     subject: "Cotización " + data.numero + " - " + companyName,
-    body:
-      "Hola " + data.cliente + ",\n\n" +
-      "Adjuntamos la cotización " + data.numero + ".\n\n" +
-      "Saludos,\n" + companyName,
+    body: "Hola " + data.cliente + ",\n\nAdjuntamos la cotización " + data.numero + ".\n\nSaludos,\n" + companyName,
     attachments: [data.pdfFile.getBlob()],
     name: companyName,
   });
@@ -781,10 +718,7 @@ function enviarCotizacionPorCorreoOperativa_(data) {
 
 function getCotizacionesFolderOperativo_() {
   const explicit = PropertiesService.getScriptProperties().getProperty("QUOTES_FOLDER_ID");
-  if (explicit && String(explicit).trim()) {
-    return DriveApp.getFolderById(String(explicit).trim());
-  }
-
+  if (explicit && String(explicit).trim()) return DriveApp.getFolderById(String(explicit).trim());
   const operationalId = getRequiredPropertyOperativo_("OPERATIONAL_SPREADSHEET_ID");
   const parents = DriveApp.getFileById(operationalId).getParents();
   return parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
@@ -794,10 +728,7 @@ function obtenerEmpresaInstaladaOperativa_() {
   try {
     const rows = getInstallerRowsOperativo_("CLIENT_CONFIG");
     const clientId = getClientIdOperativo_();
-    const row = rows.find(function(item) {
-      return String(item.CLIENT_ID || "") === clientId;
-    });
-
+    const row = rows.find(function(item) { return String(item.CLIENT_ID || "") === clientId; });
     if (row) {
       const raw = String(row.CONFIG_JSON || "").trim();
       if (raw) {
@@ -808,7 +739,6 @@ function obtenerEmpresaInstaladaOperativa_() {
   } catch (error) {
     console.error("No fue posible leer empresa instalada", error);
   }
-
   return { name: getClientIdOperativo_() };
 }
 
@@ -830,18 +760,16 @@ function inicializarInventarioDesdeInstalador_() {
   const existing = obtenerInventarioMapOperativo_();
   const now = new Date();
   const clientId = getClientIdOperativo_();
-
   productos.forEach(function(producto) {
     const codigo = String(producto.id || "").trim();
     if (!codigo || existing[codigo]) return;
-
     sheet.appendRow([
       clientId,
-      codigo,
-      String(producto.name || codigo),
+      textoSeguroHojaOperativa_(codigo),
+      textoSeguroHojaOperativa_(producto.name || codigo),
       Number(producto.stock || 0),
       Number(producto.min || 0),
-      String(producto.stockUnitLabel || "unidad"),
+      textoSeguroHojaOperativa_(producto.stockUnitLabel || "unidad"),
       now,
     ]);
   });
@@ -896,21 +824,17 @@ function obtenerVentasOperativas_() {
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.VENTAS);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return [];
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   return values.slice(1)
-    .filter(function(row) {
-      return String(row[header.CLIENT_ID] || "") === clientId;
-    })
+    .filter(function(row) { return String(row[header.CLIENT_ID] || "") === clientId; })
     .map(function(row) {
       const ventaId = String(row[header.VENTA_ID] || "");
       return {
         ventaId: ventaId,
         fecha: toIsoOperativo_(row[header.FECHA]),
         cliente: String(row[header.CLIENTE] || "Sin cliente"),
-        telefono: String(row[header.TELEFONO] || ""),
+        telefono: normalizarTextoLeidoOperativo_(row[header.TELEFONO]),
         formaPago: String(row[header.FORMA_PAGO] || ""),
         observacion: String(row[header.OBSERVACION] || ""),
         estado: String(row[header.ESTADO] || "ACTIVA"),
@@ -923,7 +847,6 @@ function obtenerVentasOperativas_() {
 function obtenerProductosInstalador_() {
   const rows = getInstallerRowsOperativo_("CLIENT_PRODUCTS");
   const clientId = getClientIdOperativo_();
-
   return rows
     .filter(function(row) { return String(row.CLIENT_ID || "") === clientId; })
     .map(function(row) {
@@ -950,7 +873,6 @@ function obtenerProductosInstalador_() {
 function obtenerClientesInstalador_() {
   const rows = getInstallerRowsOperativo_("CLIENT_CUSTOMERS");
   const clientId = getClientIdOperativo_();
-
   return rows
     .filter(function(row) { return String(row.CLIENT_ID || "") === clientId; })
     .map(function(row) {
@@ -961,7 +883,7 @@ function obtenerClientesInstalador_() {
       return {
         id: String(row.CUSTOMER_ID || ""),
         name: String(row.NOMBRE || ""),
-        phone: String(row.TELEFONO || ""),
+        phone: normalizarTextoLeidoOperativo_(row.TELEFONO),
         address: String(row.DIRECCION || ""),
         priceType: String(row.TIPO_PRECIO || "LISTA"),
         note: String(row.OBSERVACION || ""),
@@ -974,14 +896,9 @@ function getInstallerRowsOperativo_(sheetName) {
   const book = SpreadsheetApp.openById(installerId);
   const sheet = book.getSheetByName(sheetName);
   if (!sheet) throw new Error("HOJA_INSTALADOR_NO_ENCONTRADA:" + sheetName);
-
   const values = sheet.getDataRange().getValues();
   if (!values.length) return [];
-
-  const headers = values[0].map(function(value) {
-    return String(value || "").trim();
-  });
-
+  const headers = values[0].map(function(value) { return String(value || "").trim(); });
   return values.slice(1).map(function(row) {
     const out = {};
     headers.forEach(function(header, index) { out[header] = row[index]; });
@@ -998,32 +915,27 @@ function obtenerInventarioMapOperativo_() {
   const values = sheet.getDataRange().getValues();
   const map = {};
   if (values.length <= 1) return map;
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   values.slice(1).forEach(function(row, index) {
     if (String(row[header.CLIENT_ID] || "") !== clientId) return;
-    const codigo = String(row[header.CODIGO] || "").trim();
+    const codigo = normalizarTextoLeidoOperativo_(row[header.CODIGO]).trim();
     if (!codigo) return;
-
     map[codigo] = {
       rowNumber: index + 2,
       codigo: codigo,
-      producto: String(row[header.PRODUCTO] || codigo),
+      producto: normalizarTextoLeidoOperativo_(row[header.PRODUCTO] || codigo),
       stockActual: Number(row[header.STOCK_ACTUAL] || 0),
       stockMinimo: Number(row[header.STOCK_MINIMO] || 0),
-      unidadControl: String(row[header.UNIDAD_CONTROL] || "unidad"),
+      unidadControl: normalizarTextoLeidoOperativo_(row[header.UNIDAD_CONTROL] || "unidad"),
     };
   });
-
   return map;
 }
 
 function actualizarInventarioOperativo_(codigo, stockNuevo, now) {
   const inv = obtenerInventarioMapOperativo_()[codigo];
   if (!inv) throw new Error("PRODUCTO_SIN_INVENTARIO:" + codigo);
-
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.INVENTARIO);
   const header = headerMapOperativo_(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]);
   sheet.getRange(inv.rowNumber, header.STOCK_ACTUAL + 1).setValue(stockNuevo);
@@ -1032,9 +944,17 @@ function actualizarInventarioOperativo_(codigo, stockNuevo, now) {
 
 function registrarMovimientoOperativo_(mov) {
   getSheetOperativa_(CRM_BASE_SHEETS.MOVIMIENTOS).appendRow([
-    getClientIdOperativo_(), mov.movimientoId, mov.fecha, mov.tipo, mov.ventaId,
-    mov.codigo, mov.producto, mov.unidades, mov.stockAnterior, mov.stockNuevo,
-    mov.observacion || "",
+    getClientIdOperativo_(),
+    textoSeguroHojaOperativa_(mov.movimientoId),
+    mov.fecha,
+    textoSeguroHojaOperativa_(mov.tipo),
+    textoSeguroHojaOperativa_(mov.ventaId),
+    textoSeguroHojaOperativa_(mov.codigo),
+    textoSeguroHojaOperativa_(mov.producto),
+    mov.unidades,
+    mov.stockAnterior,
+    mov.stockNuevo,
+    textoSeguroHojaOperativa_(mov.observacion || ""),
   ]);
 }
 
@@ -1042,18 +962,14 @@ function buscarVentaOperativa_(ventaId) {
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.VENTAS);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return null;
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   for (var i = 1; i < values.length; i += 1) {
     const row = values[i];
     if (
       String(row[header.CLIENT_ID] || "") === clientId &&
       String(row[header.VENTA_ID] || "") === ventaId
-    ) {
-      return { rowNumber: i + 1, estado: String(row[header.ESTADO] || "ACTIVA") };
-    }
+    ) return { rowNumber: i + 1, estado: String(row[header.ESTADO] || "ACTIVA") };
   }
   return null;
 }
@@ -1061,7 +977,6 @@ function buscarVentaOperativa_(ventaId) {
 function marcarVentaAnuladaOperativa_(ventaId, now) {
   const venta = buscarVentaOperativa_(ventaId);
   if (!venta) throw new Error("VENTA_NO_ENCONTRADA");
-
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.VENTAS);
   const header = headerMapOperativo_(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]);
   sheet.getRange(venta.rowNumber, header.ESTADO + 1).setValue("ANULADA");
@@ -1072,20 +987,17 @@ function obtenerItemsVentaOperativa_(ventaId) {
   const sheet = getSheetOperativa_(CRM_BASE_SHEETS.ITEMS);
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) return [];
-
   const header = headerMapOperativo_(values[0]);
   const clientId = getClientIdOperativo_();
-
   return values.slice(1)
     .filter(function(row) {
-      return String(row[header.CLIENT_ID] || "") === clientId &&
-        String(row[header.VENTA_ID] || "") === ventaId;
+      return String(row[header.CLIENT_ID] || "") === clientId && String(row[header.VENTA_ID] || "") === ventaId;
     })
     .map(function(row) {
       return {
-        codigo: String(row[header.CODIGO] || ""),
-        producto: String(row[header.PRODUCTO] || ""),
-        formato: String(row[header.FORMATO] || ""),
+        codigo: normalizarTextoLeidoOperativo_(row[header.CODIGO]),
+        producto: normalizarTextoLeidoOperativo_(row[header.PRODUCTO]),
+        formato: normalizarTextoLeidoOperativo_(row[header.FORMATO]),
         cantidad: Number(row[header.CANTIDAD] || 0),
         unidades: Number(row[header.UNIDADES] || 0),
         precioUnitario: Number(row[header.PRECIO_UNITARIO] || 0),
@@ -1112,18 +1024,13 @@ function getClientIdOperativo_() {
 
 function getRequiredPropertyOperativo_(name) {
   const value = PropertiesService.getScriptProperties().getProperty(name);
-  if (!value || !String(value).trim()) {
-    throw new Error(name + " no configurado en Script Properties.");
-  }
+  if (!value || !String(value).trim()) throw new Error(name + " no configurado en Script Properties.");
   return String(value).trim();
 }
 
 function getOperationalSpreadsheetOperativo_() {
   const explicitId = PropertiesService.getScriptProperties().getProperty("OPERATIONAL_SPREADSHEET_ID");
-  if (explicitId && String(explicitId).trim()) {
-    return SpreadsheetApp.openById(String(explicitId).trim());
-  }
-
+  if (explicitId && String(explicitId).trim()) return SpreadsheetApp.openById(String(explicitId).trim());
   const active = SpreadsheetApp.getActiveSpreadsheet();
   if (!active) throw new Error("OPERATIONAL_SPREADSHEET_ID no configurado.");
   return active;
@@ -1146,21 +1053,16 @@ function asegurarHeadersOperativos_(sheet, headers) {
     sheet.setFrozenRows(1);
     return;
   }
-
   const current = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
   headers.forEach(function(header, index) {
-    if (String(current[index] || "").trim() !== header) {
-      sheet.getRange(1, index + 1).setValue(header);
-    }
+    if (String(current[index] || "").trim() !== header) sheet.getRange(1, index + 1).setValue(header);
   });
   sheet.setFrozenRows(1);
 }
 
 function headerMapOperativo_(headerRow) {
   const map = {};
-  headerRow.forEach(function(value, index) {
-    map[String(value || "").trim()] = index;
-  });
+  headerRow.forEach(function(value, index) { map[String(value || "").trim()] = index; });
   return map;
 }
 
@@ -1168,6 +1070,11 @@ function parsePayloadOperativo_(e) {
   const raw = e && e.postData && e.postData.contents ? e.postData.contents : "{}";
   try { return JSON.parse(raw); }
   catch (error) { throw new Error("PAYLOAD_JSON_INVALIDO"); }
+}
+
+function normalizarTextoLeidoOperativo_(value) {
+  const text = String(value == null ? "" : value);
+  return text.charAt(0) === "'" ? text.slice(1) : text;
 }
 
 function toIsoOperativo_(value) {
