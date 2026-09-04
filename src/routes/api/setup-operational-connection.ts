@@ -36,15 +36,12 @@ async function handlePost(
       await request.json() as {
         clientId?: string;
         url?: string;
-        token?: string;
       };
 
     const clientId =
       String(body.clientId || "").trim();
     const url =
       String(body.url || "").trim();
-    const token =
-      String(body.token || "").trim();
 
     if (!clientId) {
       return jsonResponse(
@@ -63,17 +60,6 @@ async function handlePost(
           ok: false,
           message:
             "Falta la URL operativa.",
-        },
-        400,
-      );
-    }
-
-    if (!token) {
-      return jsonResponse(
-        {
-          ok: false,
-          message:
-            "Falta el token operativo.",
         },
         400,
       );
@@ -117,7 +103,6 @@ async function handlePost(
       await verifyOperationalCredentials({
         clientId,
         url,
-        token,
       });
 
     if (!verification.ready) {
@@ -136,7 +121,6 @@ async function handlePost(
     await saveOperationalConnection({
       clientId,
       url,
-      token,
     });
 
     return jsonResponse({
