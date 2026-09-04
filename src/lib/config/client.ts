@@ -184,8 +184,40 @@ export function mergeClientConfig(
   };
 }
 
-export const clientConfig =
-  mergeClientConfig(
+function buildInitialClientConfig() {
+  return mergeClientConfig(
     defaultClientConfig,
     generatedClientConfig,
   );
+}
+
+export const clientConfig =
+  buildInitialClientConfig();
+
+/**
+ * Aplica la configuración de una empresa cargada en tiempo de ejecución.
+ *
+ * Se mantiene la identidad del objeto `clientConfig` para que todos los
+ * módulos que ya lo importaron observen los nuevos valores sin conservar
+ * datos de una empresa anterior.
+ */
+export function applyRuntimeClientConfig(
+  runtimeConfig:
+    DeepPartial<ClientConfig>,
+) {
+  const base =
+    buildInitialClientConfig();
+
+  const next =
+    mergeClientConfig(
+      base,
+      runtimeConfig,
+    );
+
+  Object.assign(
+    clientConfig,
+    next,
+  );
+
+  return clientConfig;
+}
