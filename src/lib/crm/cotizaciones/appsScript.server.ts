@@ -132,10 +132,9 @@ async function postCotizacionesAppsScript(
     };
   }
 
-  const payloadConToken = {
+  const payloadOperativo = {
     ...payload,
     clientId,
-    token: connection.token,
   };
 
   let response: Response;
@@ -151,7 +150,7 @@ async function postCotizacionesAppsScript(
             "text/plain;charset=utf-8",
         },
         body: JSON.stringify(
-          payloadConToken,
+          payloadOperativo,
         ),
       },
     );
