@@ -31,6 +31,11 @@ import {
   type ClientConfig,
 } from "../lib/config/client";
 
+import {
+  getActiveClientId,
+  rememberActiveClientId,
+} from "../lib/config/active-client";
+
 import type {
   Customer,
   DB,
@@ -79,12 +84,11 @@ function normalizeStoragePart(
 function getClientStorageKey() {
   const identity =
     normalizeStoragePart(
-      clientConfig.company.rut ||
-        clientConfig.company.name ||
+      getActiveClientId() ||
         "demo",
     );
 
-  return `crm-pyme-v3:${identity || "demo"}`;
+  return `crm-pyme-v4:${identity || "demo"}`;
 }
 
 function hydrateInstalledData(
@@ -126,7 +130,7 @@ function hydrateInstalledData(
       }
     }
   } catch {
-    // Si el cache anterior está dañado, se reconstruye sin tocar el backend.
+    // Si el caché anterior está dañado, se reconstruye sin tocar el backend.
   }
 
   const next: DB = {
@@ -367,9 +371,17 @@ function RootComponent() {
 
     async function loadConfig() {
       try {
+        const activeClientId =
+          getActiveClientId();
+
+        const endpoint =
+          activeClientId
+            ? `/api/runtime-bootstrap?clientId=${encodeURIComponent(activeClientId)}`
+            : "/api/runtime-bootstrap";
+
         const response =
           await fetch(
-            "/api/runtime-bootstrap",
+            endpoint,
             {
               headers: {
                 Accept:
@@ -385,6 +397,12 @@ function RootComponent() {
 
         if (!active) {
           return;
+        }
+
+        if (result.clientId) {
+          rememberActiveClientId(
+            result.clientId,
+          );
         }
 
         if (
