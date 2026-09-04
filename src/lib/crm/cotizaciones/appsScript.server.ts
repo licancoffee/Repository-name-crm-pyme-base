@@ -132,10 +132,15 @@ async function postCotizacionesAppsScript(
     };
   }
 
-  const payloadOperativo = {
+  const payloadOperativo: Record<string, unknown> = {
     ...payload,
     clientId,
   };
+
+  if (connection.legacyToken) {
+    payloadOperativo.token =
+      connection.legacyToken;
+  }
 
   let response: Response;
 
