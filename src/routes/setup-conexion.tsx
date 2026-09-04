@@ -72,9 +72,6 @@ function SetupConexionPage() {
   const [url, setUrl] =
     useState("");
 
-  const [token, setToken] =
-    useState("");
-
   const [saving, setSaving] =
     useState(false);
 
@@ -149,9 +146,9 @@ function SetupConexionPage() {
       return;
     }
 
-    if (!url.trim() || !token.trim()) {
+    if (!url.trim()) {
       setSaveMessage(
-        "Ingresa la URL /exec y el token operativo.",
+        "Ingresa la URL /exec del backend operativo.",
       );
       return;
     }
@@ -173,8 +170,6 @@ function SetupConexionPage() {
               clientId,
               url:
                 url.trim(),
-              token:
-                token.trim(),
             }),
           },
         );
@@ -189,7 +184,6 @@ function SetupConexionPage() {
         );
       }
 
-      setToken("");
       setSaveMessage(
         "Conexión guardada y verificada.",
       );
@@ -266,7 +260,11 @@ function SetupConexionPage() {
 
       <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-6">
         <a
-          href="/instalador"
+          href={
+            clientId
+              ? `/instalador?clientId=${encodeURIComponent(clientId)}`
+              : "/instalador"
+          }
           className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -319,7 +317,7 @@ function SetupConexionPage() {
             </h2>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              La URL y el token se verifican en el servidor. El token no se vuelve a mostrar después de guardarlo.
+              El instalador verifica que la URL responda y que el CLIENT_ID del backend coincida exactamente con esta empresa.
             </p>
 
             <div className="mt-5 space-y-4">
@@ -337,23 +335,6 @@ function SetupConexionPage() {
                   }
                   placeholder="https://script.google.com/macros/s/.../exec"
                   autoComplete="off"
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium">
-                  CRM API Token
-                </span>
-                <Input
-                  type="password"
-                  value={token}
-                  onChange={(event) =>
-                    setToken(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Token privado de esta empresa"
-                  autoComplete="new-password"
                 />
               </label>
 
@@ -386,8 +367,8 @@ function SetupConexionPage() {
 
         <section className="grid gap-4 sm:grid-cols-2">
           <CheckCard
-            label="ERP_APPS_SCRIPT_URL"
-            description="Endpoint operativo propio de esta empresa."
+            label="Backend propio"
+            description="Existe una URL /exec configurada para esta empresa."
             ok={
               connection?.endpointConfigured ===
               true
@@ -395,12 +376,9 @@ function SetupConexionPage() {
           />
 
           <CheckCard
-            label="CRM_API_TOKEN"
-            description="Credencial privada propia de esta empresa."
-            ok={
-              connection?.tokenConfigured ===
-              true
-            }
+            label="CLIENT_ID verificado"
+            description="La identidad del backend coincide con esta instalación."
+            ok={ready}
           />
 
           <CheckCard
@@ -414,7 +392,7 @@ function SetupConexionPage() {
 
           <CheckCard
             label="Operación autorizada"
-            description="El backend propio respondió correctamente al ping seguro."
+            description="El backend propio respondió correctamente al ping de identidad."
             ok={ready}
           />
         </section>
@@ -427,7 +405,7 @@ function SetupConexionPage() {
                 Regla de seguridad
               </h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Una empresa nueva no puede reutilizar silenciosamente la conexión operativa de otro CLIENT_ID. Antes de guardar, el instalador comprueba que el backend responda y que pertenezca exactamente a esta empresa.
+                Una empresa nueva no puede reutilizar silenciosamente el backend de otro CLIENT_ID. El instalador comprueba la identidad del backend antes de guardar la conexión.
               </p>
             </div>
           </div>
@@ -446,8 +424,8 @@ function SetupConexionPage() {
 
           <p className="mt-2 text-sm font-semibold">
             {status?.operationalReady
-              ? "✅ Instalación completa y conexión de ventas verificada."
-              : "⚠️ No registrar ventas reales hasta completar la conexión propia de esta empresa."}
+              ? "Instalación completa y conexión de ventas verificada."
+              : "No registrar ventas reales hasta completar la conexión propia de esta empresa."}
           </p>
 
           {status?.operationalReady && clientId && (
