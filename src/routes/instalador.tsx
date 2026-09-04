@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Circle,
   Database,
+  Link2,
   Loader2,
   PackagePlus,
   RefreshCw,
@@ -27,6 +28,10 @@ import {
   type ClientConfig,
 } from "@/lib/config/client";
 
+import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
+
 export const Route =
   createFileRoute(
     "/instalador",
@@ -37,7 +42,9 @@ export const Route =
 
 type InstallerStatus = {
   ok: boolean;
+  requestedClientId?: string;
   installationComplete?: boolean;
+  operationalReady?: boolean;
   config: {
     checked: boolean;
     completed: boolean;
@@ -59,6 +66,16 @@ type InstallerStatus = {
     verificationAvailable: boolean;
     message: string;
     error: string;
+  };
+  connection: {
+    checked: boolean;
+    configured: boolean;
+    reachable: boolean;
+    ready: boolean;
+    endpointConfigured: boolean;
+    tokenConfigured: boolean;
+    message: string;
+    source?: "" | "central" | "env";
   };
 };
 
@@ -88,9 +105,17 @@ function InstallerHubPage() {
     }));
 
     try {
+      const clientId =
+        getActiveClientId();
+
+      const endpoint =
+        clientId
+          ? `/api/installer-status?clientId=${encodeURIComponent(clientId)}`
+          : "/api/installer-status";
+
       const response =
         await fetch(
-          "/api/installer-status",
+          endpoint,
           {
             headers: {
               Accept:
@@ -109,6 +134,16 @@ function InstallerHubPage() {
         );
       }
 
+      if (
+        clientId &&
+        data.requestedClientId &&
+        data.requestedClientId !== clientId
+      ) {
+        throw new Error(
+          "El estado recibido pertenece a otro CLIENT_ID.",
+        );
+      }
+
       const remoteConfig =
         data.config?.completed &&
         data.config.data
@@ -120,12 +155,14 @@ function InstallerHubPage() {
         config: remoteConfig,
         installer: data,
         message:
-          data.installationComplete
-            ? "Empresa, productos y clientes están verificados."
-            : data.config?.completed
-              ? "Configuración del cliente disponible. Continúa con los pasos pendientes."
-              : data.config?.error ||
-                "La configuración de empresa todavía está pendiente.",
+          data.operationalReady
+            ? "Instalación completa y conexión operativa verificada."
+            : data.installationComplete
+              ? "Empresa, productos y clientes están verificados. Falta completar la conexión operativa."
+              : data.config?.completed
+                ? "Configuración del cliente disponible. Continúa con los pasos pendientes."
+                : data.config?.error ||
+                  "La configuración de empresa todavía está pendiente.",
       });
     } catch (error) {
       setState({
@@ -182,8 +219,51 @@ function InstallerHubPage() {
   const customersCompleted =
     state.installer?.customers.completed === true;
 
-  const fullyVerified =
+  const baseInstalled =
     state.installer?.installationComplete === true;
+
+  const connectionReady =
+    state.installer?.connection.ready === true;
+
+  const connectionConfigured =
+    state.installer?.connection.configured === true;
+
+  const connectionReachable =
+    state.installer?.connection.reachable === true;
+
+  const connectionMessage =
+    state.installer?.connection.message ||
+    "Conexión operativa pendiente.";
+
+  const fullyVerified =
+    state.installer?.operationalReady === true;
+
+  const activeClientId =
+    state.installer?.requestedClientId ||
+    state.installer?.config.clientId ||
+    getActiveClientId();
+
+  function withClientId(path: string) {
+    if (!activeClientId) {
+      return path;
+    }
+
+    const separator =
+      path.includes("?")
+        ? "&"
+        : "?";
+
+    return `${path}${separator}clientId=${encodeURIComponent(activeClientId)}`;
+  }
+
+  const nextStepHref =
+    !configCompleted
+      ? withClientId("/setup")
+      : !productsCompleted
+        ? withClientId("/setup-productos")
+        : !customersCompleted
+          ? withClientId("/setup-clientes")
+          : withClientId("/setup-conexion");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -194,7 +274,7 @@ function InstallerHubPage() {
             `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
         }}
       >
-        <div className="mx-auto flex max-w-5xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div
               className="grid h-12 w-12 place-items-center rounded-2xl shadow-sm"
@@ -218,6 +298,12 @@ function InstallerHubPage() {
               <p className="mt-1 text-sm text-white/75">
                 {companyName}
               </p>
+
+              {activeClientId && (
+                <p className="mt-1 text-xs text-white/55">
+                  {activeClientId}
+                </p>
+              )}
             </div>
           </div>
 
@@ -243,7 +329,7 @@ function InstallerHubPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6">
         <section className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold">Nueva instalación</h2>
@@ -260,7 +346,8 @@ function InstallerHubPage() {
             <ArrowRight className="h-4 w-4" />
           </a>
         </section>
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <StatusCard
             icon={Database}
             label="Configuración"
@@ -309,6 +396,23 @@ function InstallerHubPage() {
           />
 
           <StatusCard
+            icon={Link2}
+            label="Conexión"
+            value={
+              connectionReady
+                ? "Lista"
+                : connectionConfigured
+                  ? "Pendiente"
+                  : "Sin configurar"
+            }
+            tone={
+              connectionReady
+                ? "success"
+                : "neutral"
+            }
+          />
+
+          <StatusCard
             icon={Settings2}
             label="Módulos activos"
             value={String(
@@ -321,7 +425,7 @@ function InstallerHubPage() {
             icon={Building2}
             label="Cliente"
             value={
-              state.installer?.config.clientId ||
+              activeClientId ||
               companyName
             }
             tone="neutral"
@@ -359,6 +463,12 @@ function InstallerHubPage() {
                   Clientes: {customersError}
                 </p>
               )}
+
+              {baseInstalled && !connectionReady && (
+                <p className="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                  Conexión operativa: {connectionMessage}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -370,15 +480,15 @@ function InstallerHubPage() {
             </p>
 
             <h2 className="mt-1 text-xl font-bold">
-              Configura el CRM en 3 pasos
+              Configura el CRM en 4 pasos
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              El Centro verifica automáticamente lo que ya existe en el backend y evita marcar pasos como completos sin evidencia real.
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+              El Centro verifica empresa, catálogo, clientes y conexión operativa antes de declarar el CRM listo para vender.
             </p>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
             <InstallerStep
               number="01"
               icon={Building2}
@@ -389,7 +499,7 @@ function InstallerHubPage() {
                   ? "Configuración verificada en backend."
                   : "Configuración pendiente."
               }
-              href="/setup"
+              href={withClientId("/setup")}
               action={
                 configCompleted
                   ? "Revisar configuración"
@@ -411,7 +521,7 @@ function InstallerHubPage() {
                   : state.installer?.products.error ||
                     "Aún no hay productos verificados."
               }
-              href="/setup-productos"
+              href={withClientId("/setup-productos")}
               action={
                 productsCompleted
                   ? "Revisar productos"
@@ -436,7 +546,7 @@ function InstallerHubPage() {
                       ? "No hay clientes iniciales guardados."
                       : "Comprobando clientes en backend."
               }
-              href="/setup-clientes"
+              href={withClientId("/setup-clientes")}
               action={
                 customersCompleted
                   ? "Revisar clientes"
@@ -444,6 +554,31 @@ function InstallerHubPage() {
               }
               completed={
                 customersCompleted
+              }
+            />
+
+            <InstallerStep
+              number="04"
+              icon={Link2}
+              title="Conexión operativa"
+              description="Vincula esta empresa con su backend propio y verifica que ventas e inventario puedan operar."
+              detail={
+                connectionReady
+                  ? "Backend accesible y operación autorizada."
+                  : connectionConfigured && connectionReachable
+                    ? "Backend accesible, pero la autorización operativa aún no está completa."
+                    : connectionConfigured
+                      ? connectionMessage
+                      : "Conexión operativa pendiente."
+              }
+              href={withClientId("/setup-conexion")}
+              action={
+                connectionReady
+                  ? "Revisar conexión"
+                  : "Configurar conexión"
+              }
+              completed={
+                connectionReady
               }
             />
           </div>
@@ -461,21 +596,31 @@ function InstallerHubPage() {
               <h2 className="font-semibold">
                 {fullyVerified
                   ? "Instalación completa"
-                  : "CRM Base"}
+                  : baseInstalled
+                    ? "Falta conexión operativa"
+                    : "Instalación en progreso"}
               </h2>
 
               <p className="mt-1 text-sm text-muted-foreground">
                 {fullyVerified
-                  ? "Empresa, productos y clientes están verificados. El CRM está listo para validación operativa."
-                  : "Puedes abrir el CRM para validar los módulos, pero el Centro todavía no declara la instalación como completa hasta verificar todos los pasos."}
+                  ? "Empresa, productos, clientes y conexión operativa están verificados. El CRM está listo para pruebas finales de venta."
+                  : baseInstalled
+                    ? "Los datos base ya están verificados. Completa el Paso 4 antes de utilizar ventas reales."
+                    : "Completa los pasos pendientes. El CRM no se declarará listo para operar hasta verificar los cuatro pasos."}
               </p>
             </div>
 
             <a
-              href="/"
+              href={
+                fullyVerified
+                  ? withClientId("/")
+                  : nextStepHref
+              }
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
             >
-              Abrir CRM
+              {fullyVerified
+                ? "Abrir CRM"
+                : "Continuar instalación"}
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>
