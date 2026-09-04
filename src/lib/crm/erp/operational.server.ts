@@ -133,8 +133,8 @@ export async function readOperationalSnapshot(
     "bootstrap",
   );
   apiUrl.searchParams.set(
-    "token",
-    connection.token,
+    "clientId",
+    connection.clientId,
   );
 
   const response = await fetch(apiUrl.toString(), {
