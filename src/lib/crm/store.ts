@@ -4,8 +4,8 @@ import {
 } from "react";
 
 import {
-  clientConfig,
-} from "@/lib/config/client";
+  getActiveClientId,
+} from "@/lib/config/active-client";
 
 import {
   lineStockUnits,
@@ -89,12 +89,11 @@ function normalizeStoragePart(
 function getStorageKey() {
   const identity =
     normalizeStoragePart(
-      clientConfig.company.rut ||
-        clientConfig.company.name ||
+      getActiveClientId() ||
         "demo",
     );
 
-  return `crm-pyme-v3:${identity || "demo"}`;
+  return `crm-pyme-v4:${identity || "demo"}`;
 }
 
 function ensureClientNamespace() {
