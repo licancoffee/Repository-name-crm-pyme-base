@@ -12,9 +12,25 @@ async function post(
   body:
     | ErpSalePayload
     | ErpCancelPayload,
+  requestedClientId: string,
 ): Promise<ErpWriteResult> {
+  const clientId =
+    String(requestedClientId || "").trim();
+
+  if (!clientId) {
+    return {
+      ok: false,
+      error:
+        "SIN_CLIENT_ID",
+      mensaje:
+        "No se pudo determinar la empresa activa para esta venta.",
+    };
+  }
+
   const connection =
-    await resolveOperationalConnection();
+    await resolveOperationalConnection(
+      clientId,
+    );
 
   if (!connection) {
     return {
@@ -26,10 +42,19 @@ async function post(
     };
   }
 
+  if (connection.clientId !== clientId) {
+    return {
+      ok: false,
+      error:
+        "CLIENT_ID_INCORRECTO",
+      mensaje:
+        "La conexión operativa resuelta pertenece a otra empresa.",
+    };
+  }
+
   const payloadOperativo = {
     ...body,
-    clientId:
-      connection.clientId,
+    clientId,
   };
 
   let response: Response;
@@ -92,8 +117,7 @@ async function post(
     if (
       respuesta &&
       respuesta.clientId &&
-      respuesta.clientId !==
-        connection.clientId
+      respuesta.clientId !== clientId
     ) {
       return {
         ok: false,
@@ -168,16 +192,24 @@ async function post(
 
 export function registrarVentaEnErp(
   payload: ErpSalePayload,
+  clientId: string,
 ): Promise<ErpWriteResult> {
-  return post(payload);
+  return post(
+    payload,
+    clientId,
+  );
 }
 
 export function anularVentaEnErp(
   ventaId: string,
+  clientId: string,
 ): Promise<ErpWriteResult> {
-  return post({
-    action:
-      "anularVenta",
-    ventaId,
-  });
+  return post(
+    {
+      action:
+        "anularVenta",
+      ventaId,
+    },
+    clientId,
+  );
 }
