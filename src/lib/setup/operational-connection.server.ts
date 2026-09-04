@@ -6,6 +6,7 @@ export type OperationalConnection = {
   clientId: string;
   url: string;
   source: "central" | "env";
+  legacyToken?: string;
 };
 
 type RemoteConnectionResponse = {
@@ -15,6 +16,7 @@ type RemoteConnectionResponse = {
   configured?: boolean;
   connection?: {
     url?: string;
+    token?: string;
   };
 };
 
@@ -115,10 +117,22 @@ async function loadCentralConnection(
     return null;
   }
 
+  const storedToken =
+    String(
+      result.connection?.token || "",
+    ).trim();
+
+  const legacyToken =
+    storedToken &&
+    storedToken !== "CLIENT_ID_ONLY"
+      ? storedToken
+      : undefined;
+
   return {
     clientId,
     url,
     source: "central",
+    legacyToken,
   };
 }
 
@@ -149,11 +163,19 @@ function loadEnvConnection(
     return null;
   }
 
+  const legacyToken =
+    String(
+      process.env.CRM_API_TOKEN ||
+        process.env.CRM_COTIZACIONES_TOKEN ||
+        "",
+    ).trim() || undefined;
+
   return {
     clientId:
       clientId || activeClientId,
     url,
     source: "env",
+    legacyToken,
   };
 }
 
@@ -226,11 +248,6 @@ export async function saveOperationalConnection(
           input.clientId,
         connection: {
           url: input.url,
-          /**
-           * Compatibilidad transitoria con el backend v4 del instalador,
-           * cuya hoja todavía conserva una columna CRM_API_TOKEN.
-           * Este valor NO se utiliza para autenticar operaciones del CRM.
-           */
           token:
             "CLIENT_ID_ONLY",
         },
