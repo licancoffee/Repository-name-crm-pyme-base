@@ -25,12 +25,15 @@ export async function verifyOperationalCredentials(
   input: {
     clientId: string;
     url: string;
+    legacyToken?: string;
   },
 ): Promise<ErpConnectionCheck> {
   const clientId =
     String(input.clientId || "").trim();
   const url =
     String(input.url || "").trim();
+  const legacyToken =
+    String(input.legacyToken || "").trim();
 
   const endpointConfigured =
     Boolean(url);
@@ -47,6 +50,15 @@ export async function verifyOperationalCredentials(
     };
   }
 
+  const pingPayload: Record<string, string> = {
+    action: "ping",
+    clientId,
+  };
+
+  if (legacyToken) {
+    pingPayload.token = legacyToken;
+  }
+
   try {
     const response =
       await fetch(url, {
@@ -56,10 +68,9 @@ export async function verifyOperationalCredentials(
           "Content-Type":
             "text/plain;charset=utf-8",
         },
-        body: JSON.stringify({
-          action: "ping",
-          clientId,
-        }),
+        body: JSON.stringify(
+          pingPayload,
+        ),
       });
 
     const text =
@@ -184,6 +195,8 @@ export async function checkErpConnection(
         connection.clientId,
       url:
         connection.url,
+      legacyToken:
+        connection.legacyToken,
     });
 
   return {
