@@ -8,12 +8,6 @@ import {
   resolveOperationalConnection,
 } from "@/lib/setup/operational-connection.server";
 
-/**
- * Cliente del backend operativo mediante Google Apps Script Web App.
- *
- * La conexión se resuelve por CLIENT_ID activo desde el instalador central.
- * El .env queda solamente como compatibilidad de respaldo.
- */
 async function post(
   body:
     | ErpSalePayload
@@ -32,10 +26,10 @@ async function post(
     };
   }
 
-  const payloadConToken = {
+  const payloadOperativo = {
     ...body,
-    token:
-      connection.token,
+    clientId:
+      connection.clientId,
   };
 
   let response: Response;
@@ -47,18 +41,15 @@ async function post(
         {
           method:
             "POST",
-
           redirect:
             "follow",
-
           headers: {
             "Content-Type":
               "text/plain;charset=utf-8",
           },
-
           body:
             JSON.stringify(
-              payloadConToken,
+              payloadOperativo,
             ),
         },
       );
@@ -82,10 +73,7 @@ async function post(
 
   if (!response.ok) {
     console.error(
-      `Apps Script HTTP ${response.status}: ${text.slice(
-        0,
-        500,
-      )}`,
+      `Apps Script HTTP ${response.status}: ${text.slice(0, 500)}`,
     );
 
     return {
@@ -99,9 +87,7 @@ async function post(
 
   try {
     const respuesta =
-      JSON.parse(
-        text,
-      );
+      JSON.parse(text);
 
     if (
       respuesta &&
@@ -137,11 +123,9 @@ async function post(
     ) {
       return {
         ok: false,
-
         error:
           respuesta.error ||
           "ERROR_BACKEND",
-
         mensaje:
           respuesta.mensaje ||
           respuesta.error ||
@@ -161,28 +145,21 @@ async function post(
 
     return {
       ok: false,
-
       error:
         "RESPUESTA_INVALIDA",
-
       mensaje:
         "El sistema respondió correctamente, pero el formato de la respuesta no fue reconocido.",
     };
   } catch (error) {
     console.error(
-      `Apps Script response is not valid JSON: ${text.slice(
-        0,
-        500,
-      )}`,
+      `Apps Script response is not valid JSON: ${text.slice(0, 500)}`,
       error,
     );
 
     return {
       ok: false,
-
       error:
         "RESPUESTA_INVALIDA",
-
       mensaje:
         "El sistema respondió en un formato inesperado.",
     };
@@ -192,9 +169,7 @@ async function post(
 export function registrarVentaEnErp(
   payload: ErpSalePayload,
 ): Promise<ErpWriteResult> {
-  return post(
-    payload,
-  );
+  return post(payload);
 }
 
 export function anularVentaEnErp(
@@ -203,7 +178,6 @@ export function anularVentaEnErp(
   return post({
     action:
       "anularVenta",
-
     ventaId,
   });
 }
