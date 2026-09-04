@@ -1,19 +1,37 @@
 import { createServerFn } from "@tanstack/react-start";
 
+import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
+
 import type {
   ErpSalePayload,
   ErpWriteResult,
 } from "./payload";
 
-/**
- * Registra una venta en el backend de integración.
- */
-export const registrarVentaErp = createServerFn({
+function requireActiveClientId() {
+  const clientId =
+    String(
+      getActiveClientId() || "",
+    ).trim();
+
+  if (!clientId) {
+    throw new Error(
+      "No se pudo determinar el CLIENT_ID activo.",
+    );
+  }
+
+  return clientId;
+}
+
+const registrarVentaErpServer = createServerFn({
   method: "POST",
 })
   .validator(
-    (data: ErpSalePayload) =>
-      data,
+    (input: {
+      clientId: string;
+      payload: ErpSalePayload;
+    }) => input,
   )
   .handler(
     async ({
@@ -21,11 +39,8 @@ export const registrarVentaErp = createServerFn({
     }): Promise<ErpWriteResult> => {
       console.log(
         "[VENTA] Handler iniciado",
-      );
-
-      console.log(
-        "[VENTA] Venta ID:",
-        data.ventaId,
+        data.clientId,
+        data.payload.ventaId,
       );
 
       try {
@@ -35,23 +50,10 @@ export const registrarVentaErp = createServerFn({
           "./appsScript.server"
         );
 
-        console.log(
-          "[VENTA] Backend de integración cargado correctamente",
+        return await registrarVentaEnErp(
+          data.payload,
+          data.clientId,
         );
-
-        const result =
-          await registrarVentaEnErp(
-            data,
-          );
-
-        console.log(
-          "[VENTA] Resultado:",
-          JSON.stringify(
-            result,
-          ),
-        );
-
-        return result;
       } catch (error) {
         console.error(
           "[VENTA] Error interno:",
@@ -60,10 +62,8 @@ export const registrarVentaErp = createServerFn({
 
         return {
           ok: false,
-
           error:
             "ERROR_SERVER_FN",
-
           mensaje:
             error instanceof Error
               ? error.message
@@ -73,18 +73,29 @@ export const registrarVentaErp = createServerFn({
     },
   );
 
-/**
- * Anula una venta y devuelve el stock correspondiente.
- */
-export const anularVentaErp = createServerFn({
+export async function registrarVentaErp(
+  input: {
+    data: ErpSalePayload;
+  },
+): Promise<ErpWriteResult> {
+  return registrarVentaErpServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+      payload:
+        input.data,
+    },
+  });
+}
+
+const anularVentaErpServer = createServerFn({
   method: "POST",
 })
   .validator(
-    (
-      data: {
-        ventaId: string;
-      },
-    ) => data,
+    (input: {
+      clientId: string;
+      ventaId: string;
+    }) => input,
   )
   .handler(
     async ({
@@ -92,6 +103,7 @@ export const anularVentaErp = createServerFn({
     }): Promise<ErpWriteResult> => {
       console.log(
         "[ANULAR VENTA] Handler iniciado:",
+        data.clientId,
         data.ventaId,
       );
 
@@ -102,19 +114,10 @@ export const anularVentaErp = createServerFn({
           "./appsScript.server"
         );
 
-        const result =
-          await anularVentaEnErp(
-            data.ventaId,
-          );
-
-        console.log(
-          "[ANULAR VENTA] Resultado:",
-          JSON.stringify(
-            result,
-          ),
+        return await anularVentaEnErp(
+          data.ventaId,
+          data.clientId,
         );
-
-        return result;
       } catch (error) {
         console.error(
           "[ANULAR VENTA] Error interno:",
@@ -123,10 +126,8 @@ export const anularVentaErp = createServerFn({
 
         return {
           ok: false,
-
           error:
             "ERROR_SERVER_FN",
-
           mensaje:
             error instanceof Error
               ? error.message
@@ -135,4 +136,20 @@ export const anularVentaErp = createServerFn({
       }
     },
   );
-  
+
+export async function anularVentaErp(
+  input: {
+    data: {
+      ventaId: string;
+    };
+  },
+): Promise<ErpWriteResult> {
+  return anularVentaErpServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+      ventaId:
+        input.data.ventaId,
+    },
+  });
+}
