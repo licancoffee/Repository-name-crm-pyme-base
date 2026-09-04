@@ -84,7 +84,6 @@ async function handleGet(
       reachable: false,
       ready: false,
       endpointConfigured: false,
-      tokenConfigured: false,
       message: "",
       source: "" as "" | "central" | "env",
     },
@@ -178,8 +177,6 @@ async function handleGet(
       connection.ready,
     endpointConfigured:
       connection.endpointConfigured,
-    tokenConfigured:
-      connection.tokenConfigured,
     message:
       connection.message,
     source:
