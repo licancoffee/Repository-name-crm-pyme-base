@@ -1,19 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 
-/**
- * Lectura del backend operativo del CRM Base.
- *
- * Esta capa conserva los códigos originales de producto y utiliza
- * directamente el inventario, formatos, clientes y ventas devueltos
- * por la Web App operativa de cada cliente.
- */
-export const getErpSnapshot = createServerFn({
+import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
+
+function requireActiveClientId() {
+  const clientId =
+    String(
+      getActiveClientId() || "",
+    ).trim();
+
+  if (!clientId) {
+    throw new Error(
+      "No se pudo determinar el CLIENT_ID activo.",
+    );
+  }
+
+  return clientId;
+}
+
+const getErpSnapshotServer = createServerFn({
   method: "GET",
 })
   .validator(
     (data: {
-      clientId?: string;
-    } = {}) => data,
+      clientId: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const {
@@ -26,3 +38,12 @@ export const getErpSnapshot = createServerFn({
       data.clientId,
     );
   });
+
+export async function getErpSnapshot() {
+  return getErpSnapshotServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+    },
+  });
+}
