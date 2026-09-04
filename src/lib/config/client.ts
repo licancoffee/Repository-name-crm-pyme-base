@@ -80,7 +80,6 @@ export type IntegrationConfig = {
   appsScript: {
     enabled: boolean;
     urlEnvName: string;
-    tokenEnvName: string;
   };
 
   googleSheets: {
@@ -171,10 +170,12 @@ export function mergeClientConfig(
     integrations: {
       ...base.integrations,
       ...override.integrations,
+
       appsScript: {
         ...base.integrations.appsScript,
         ...override.integrations?.appsScript,
       },
+
       googleSheets: {
         ...base.integrations.googleSheets,
         ...override.integrations?.googleSheets,
@@ -183,121 +184,8 @@ export function mergeClientConfig(
   };
 }
 
-const initialClientConfig =
+export const clientConfig =
   mergeClientConfig(
     defaultClientConfig,
     generatedClientConfig,
   );
-
-export const clientConfig:
-  ClientConfig = {
-  ...initialClientConfig,
-  company: {
-    ...initialClientConfig.company,
-  },
-  branding: {
-    ...initialClientConfig.branding,
-  },
-  commercial: {
-    ...initialClientConfig.commercial,
-    volumePricingRules: [
-      ...initialClientConfig.commercial.volumePricingRules,
-    ],
-  },
-  modules: {
-    ...initialClientConfig.modules,
-  },
-  payments: {
-    ...initialClientConfig.payments,
-    methods: [
-      ...initialClientConfig.payments.methods,
-    ],
-  },
-  shipping: {
-    ...initialClientConfig.shipping,
-  },
-  whatsapp: {
-    ...initialClientConfig.whatsapp,
-  },
-  integrations: {
-    ...initialClientConfig.integrations,
-    appsScript: {
-      ...initialClientConfig.integrations.appsScript,
-    },
-    googleSheets: {
-      ...initialClientConfig.integrations.googleSheets,
-    },
-  },
-};
-
-/**
- * Aplica configuración remota sin reemplazar las referencias de los
- * objetos anidados. Esto es importante porque módulos como company.ts,
- * commercial.ts y otros exportan referencias directas a estos objetos.
- */
-export function applyRuntimeClientConfig(
-  remoteConfig:
-    DeepPartial<ClientConfig>,
-): ClientConfig {
-  const merged =
-    mergeClientConfig(
-      clientConfig,
-      remoteConfig,
-    );
-
-  clientConfig.setupVersion =
-    merged.setupVersion;
-
-  Object.assign(
-    clientConfig.company,
-    merged.company,
-  );
-
-  Object.assign(
-    clientConfig.branding,
-    merged.branding,
-  );
-
-  Object.assign(
-    clientConfig.commercial,
-    merged.commercial,
-  );
-  clientConfig.commercial.volumePricingRules = [
-    ...merged.commercial.volumePricingRules,
-  ];
-
-  Object.assign(
-    clientConfig.modules,
-    merged.modules,
-  );
-
-  Object.assign(
-    clientConfig.payments,
-    merged.payments,
-  );
-  clientConfig.payments.methods = [
-    ...merged.payments.methods,
-  ];
-
-  Object.assign(
-    clientConfig.shipping,
-    merged.shipping,
-  );
-
-  Object.assign(
-    clientConfig.whatsapp,
-    merged.whatsapp,
-  );
-
-  Object.assign(
-    clientConfig.integrations.appsScript,
-    merged.integrations.appsScript,
-  );
-
-  Object.assign(
-    clientConfig.integrations.googleSheets,
-    merged.integrations.googleSheets,
-  );
-
-  return clientConfig;
-}
