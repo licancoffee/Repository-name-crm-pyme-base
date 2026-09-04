@@ -5,7 +5,6 @@ import {
 export type OperationalConnection = {
   clientId: string;
   url: string;
-  token: string;
   source: "central" | "env";
 };
 
@@ -16,7 +15,6 @@ type RemoteConnectionResponse = {
   configured?: boolean;
   connection?: {
     url?: string;
-    token?: string;
   };
 };
 
@@ -109,15 +107,10 @@ async function loadCentralConnection(
     String(
       result.connection?.url || "",
     ).trim();
-  const token =
-    String(
-      result.connection?.token || "",
-    ).trim();
 
   if (
     result.configured !== true ||
-    !url ||
-    !token
+    !url
   ) {
     return null;
   }
@@ -125,7 +118,6 @@ async function loadCentralConnection(
   return {
     clientId,
     url,
-    token,
     source: "central",
   };
 }
@@ -153,14 +145,7 @@ function loadEnvConnection(
         "",
     ).trim();
 
-  const token =
-    String(
-      process.env.CRM_API_TOKEN ||
-        process.env.CRM_COTIZACIONES_TOKEN ||
-        "",
-    ).trim();
-
-  if (!url || !token) {
+  if (!url) {
     return null;
   }
 
@@ -168,7 +153,6 @@ function loadEnvConnection(
     clientId:
       clientId || activeClientId,
     url,
-    token,
     source: "env",
   };
 }
@@ -210,7 +194,6 @@ export async function saveOperationalConnection(
   input: {
     clientId: string;
     url: string;
-    token: string;
   },
 ) {
   const central =
@@ -243,7 +226,6 @@ export async function saveOperationalConnection(
           input.clientId,
         connection: {
           url: input.url,
-          token: input.token,
         },
       }),
     });
