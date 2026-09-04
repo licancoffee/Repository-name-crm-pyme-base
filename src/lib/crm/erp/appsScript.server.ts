@@ -52,10 +52,15 @@ async function post(
     };
   }
 
-  const payloadOperativo = {
+  const payloadOperativo: Record<string, unknown> = {
     ...body,
     clientId,
   };
+
+  if (connection.legacyToken) {
+    payloadOperativo.token =
+      connection.legacyToken;
+  }
 
   let response: Response;
 
