@@ -226,6 +226,13 @@ export async function saveOperationalConnection(
           input.clientId,
         connection: {
           url: input.url,
+          /**
+           * Compatibilidad transitoria con el backend v4 del instalador,
+           * cuya hoja todavía conserva una columna CRM_API_TOKEN.
+           * Este valor NO se utiliza para autenticar operaciones del CRM.
+           */
+          token:
+            "CLIENT_ID_ONLY",
         },
       }),
     });
