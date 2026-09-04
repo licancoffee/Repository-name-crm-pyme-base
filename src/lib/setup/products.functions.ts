@@ -2,14 +2,33 @@ import {
   createServerFn,
 } from "@tanstack/react-start";
 
-export const getInstalledProducts =
+import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
+
+function requireActiveClientId() {
+  const clientId =
+    String(
+      getActiveClientId() || "",
+    ).trim();
+
+  if (!clientId) {
+    throw new Error(
+      "No se pudo determinar el CLIENT_ID activo.",
+    );
+  }
+
+  return clientId;
+}
+
+const getInstalledProductsServer =
   createServerFn({
     method: "GET",
   })
     .validator(
       (data: {
-        clientId?: string;
-      } = {}) => data,
+        clientId: string;
+      }) => data,
     )
     .handler(
       async ({ data }) => {
@@ -24,3 +43,12 @@ export const getInstalledProducts =
         );
       },
     );
+
+export async function getInstalledProducts() {
+  return getInstalledProductsServer({
+    data: {
+      clientId:
+        requireActiveClientId(),
+    },
+  });
+}
