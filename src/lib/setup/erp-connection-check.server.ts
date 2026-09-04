@@ -25,34 +25,25 @@ export async function verifyOperationalCredentials(
   input: {
     clientId: string;
     url: string;
-    token: string;
   },
 ): Promise<ErpConnectionCheck> {
   const clientId =
     String(input.clientId || "").trim();
   const url =
     String(input.url || "").trim();
-  const token =
-    String(input.token || "").trim();
 
   const endpointConfigured =
     Boolean(url);
-  const tokenConfigured =
-    Boolean(token);
 
-  if (!endpointConfigured || !tokenConfigured) {
+  if (!endpointConfigured) {
     return {
       configured: false,
       reachable: false,
       ready: false,
-      endpointConfigured,
-      tokenConfigured,
+      endpointConfigured: false,
+      tokenConfigured: true,
       message:
-        !endpointConfigured && !tokenConfigured
-          ? "Faltan URL operativa y token."
-          : !endpointConfigured
-            ? "Falta la URL operativa."
-            : "Falta el token operativo.",
+        "Falta la URL operativa.",
     };
   }
 
@@ -67,7 +58,7 @@ export async function verifyOperationalCredentials(
         },
         body: JSON.stringify({
           action: "ping",
-          token,
+          clientId,
         }),
       });
 
@@ -181,7 +172,7 @@ export async function checkErpConnection(
       reachable: false,
       ready: false,
       endpointConfigured: false,
-      tokenConfigured: false,
+      tokenConfigured: true,
       message:
         "Esta empresa todavía no tiene una conexión operativa propia configurada.",
     };
@@ -193,8 +184,6 @@ export async function checkErpConnection(
         connection.clientId,
       url:
         connection.url,
-      token:
-        connection.token,
     });
 
   return {
