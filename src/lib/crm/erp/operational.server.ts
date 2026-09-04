@@ -137,6 +137,13 @@ export async function readOperationalSnapshot(
     connection.clientId,
   );
 
+  if (connection.legacyToken) {
+    apiUrl.searchParams.set(
+      "token",
+      connection.legacyToken,
+    );
+  }
+
   const response = await fetch(apiUrl.toString(), {
     method: "GET",
     redirect: "follow",
