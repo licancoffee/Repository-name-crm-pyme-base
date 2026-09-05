@@ -67,7 +67,7 @@ export const Route = createFileRoute("/historial")({
   component: Historial,
 });
 
-function cleanSaleNote(note) {
+function cleanSaleNote(note: unknown) {
   const value = String(note || "").trim();
 
   if (!value) {
