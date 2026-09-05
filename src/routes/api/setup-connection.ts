@@ -58,10 +58,6 @@ async function handlePost(
       String(
         body?.url || "",
       ).trim();
-    const token =
-      String(
-        body?.token || "",
-      ).trim();
 
     if (!clientId) {
       return jsonResponse(
@@ -105,22 +101,10 @@ async function handlePost(
       );
     }
 
-    if (!token) {
-      return jsonResponse(
-        {
-          ok: false,
-          message:
-            "Falta el token operativo.",
-        },
-        400,
-      );
-    }
-
     const verification =
       await verifyOperationalCredentials({
         clientId,
         url,
-        token,
       });
 
     if (!verification.ready) {
@@ -138,7 +122,6 @@ async function handlePost(
     await saveOperationalConnection({
       clientId,
       url,
-      token,
     });
 
     return jsonResponse(
