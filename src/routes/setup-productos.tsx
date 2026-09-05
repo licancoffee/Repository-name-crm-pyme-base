@@ -60,6 +60,22 @@ type SaveState =
       message: string;
     };
 
+function getClientId() {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return "";
+  }
+
+  return (
+    new URLSearchParams(
+      window.location.search,
+    ).get("clientId")?.trim() ||
+    ""
+  );
+}
+
 function SetupProductsPage() {
   const [
     drafts,
@@ -181,6 +197,18 @@ function SetupProductsPage() {
   }
 
   async function saveProducts() {
+    const clientId =
+      getClientId();
+
+    if (!clientId) {
+      setSaveState({
+        status: "error",
+        message:
+          "Falta clientId en la URL.",
+      });
+      return;
+    }
+
     const validation =
       validateProductDrafts(
         drafts,
@@ -233,6 +261,7 @@ function SetupProductsPage() {
 
             body:
               JSON.stringify({
+                clientId,
                 products:
                   drafts,
               }),
@@ -256,6 +285,15 @@ function SetupProductsPage() {
           errors ||
             data?.message ||
             "No fue posible guardar el catálogo.",
+        );
+      }
+
+      if (
+        data?.clientId &&
+        data.clientId !== clientId
+      ) {
+        throw new Error(
+          "El backend respondió con otro CLIENT_ID.",
         );
       }
 
