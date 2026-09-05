@@ -10,6 +10,10 @@ import {
   commercialConfig,
 } from "../config/commercial";
 
+import {
+  getActiveClientId,
+} from "../config/active-client";
+
 import type {
   Product,
   ProductFormat,
@@ -263,6 +267,17 @@ export async function createWhatsAppQuote(
     );
   }
 
+  const clientId =
+    String(
+      getActiveClientId() || "",
+    ).trim();
+
+  if (!clientId) {
+    throw new Error(
+      "No se pudo determinar CLIENT_ID para la cotización de WhatsApp.",
+    );
+  }
+
   /*******************************************************
    * CATÁLOGO
    *******************************************************/
@@ -396,32 +411,35 @@ export async function createWhatsAppQuote(
    *******************************************************/
 
   const result =
-    await crearCotizacionEnAppsScript({
-      action:
-        "crearCotizacion",
+    await crearCotizacionEnAppsScript(
+      {
+        action:
+          "crearCotizacion",
 
-      cliente: {
-        nombre:
-          session.customerName.trim(),
+        cliente: {
+          nombre:
+            session.customerName.trim(),
 
-        email:
-          session.email
-            .trim()
-            .toLowerCase(),
+          email:
+            session.email
+              .trim()
+              .toLowerCase(),
 
-        telefono:
-          session.phone,
+          telefono:
+            session.phone,
 
-        localidad:
-          session.location.trim() ||
-          undefined,
+          localidad:
+            session.location.trim() ||
+            undefined,
+        },
+
+        items,
+
+        observaciones:
+          "Cotización solicitada por WhatsApp.",
       },
-
-      items,
-
-      observaciones:
-        "Cotización solicitada por WhatsApp.",
-    });
+      clientId,
+    );
 
   return {
     ...result,
