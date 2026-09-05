@@ -45,7 +45,6 @@ import type {
 import { companyConfig } from "@/lib/config/company";
 import { commercialConfig } from "@/lib/config/commercial";
 
-
 export const Route = createFileRoute(
   "/historial-cotizaciones",
 )({
@@ -66,7 +65,6 @@ export const Route = createFileRoute(
   component: HistorialCotizaciones,
 });
 
-
 type QuoteToSaleDraft = {
   version: 1;
   source: "cotizacion";
@@ -83,19 +81,16 @@ type QuoteToSaleDraft = {
   note?: string;
 };
 
-
 function normalizeText(value: unknown) {
   return String(value ?? "")
     .trim()
     .toLowerCase();
 }
 
-
 function normalizePhone(value: unknown) {
   return String(value ?? "")
     .replace(/\D/g, "");
 }
-
 
 function paymentFromQuote(
   value: unknown,
@@ -132,7 +127,6 @@ function paymentFromQuote(
   return "pendiente";
 }
 
-
 function quoteStatusVariant(
   estado: string,
 ): "default" | "secondary" | "outline" | "destructive" {
@@ -159,7 +153,6 @@ function quoteStatusVariant(
 
   return "outline";
 }
-
 
 function quoteDateLabel(
   value: unknown,
@@ -189,7 +182,6 @@ function quoteDateLabel(
   return raw;
 }
 
-
 function HistorialCotizaciones() {
   const db = useDB();
   const navigate = useNavigate();
@@ -211,7 +203,6 @@ function HistorialCotizaciones() {
 
   const [converting, setConverting] =
     useState(false);
-
 
   async function loadQuotes() {
     setLoading(true);
@@ -274,11 +265,9 @@ function HistorialCotizaciones() {
     }
   }
 
-
   useEffect(() => {
     void loadQuotes();
   }, []);
-
 
   const filtered =
     useMemo(
@@ -320,8 +309,9 @@ function HistorialCotizaciones() {
       ],
     );
 
-
-  function saleStatusForQuote(cot) {
+  function saleStatusForQuote(
+    cot: CotizacionHistorial,
+  ) {
     if (!cot?.ventaId) {
       return "";
     }
@@ -373,7 +363,6 @@ function HistorialCotizaciones() {
     );
   }
 
-
   function buildSaleLines(
     cot: CotizacionHistorial,
   ): SaleLine[] {
@@ -424,24 +413,15 @@ function HistorialCotizaciones() {
             format.label,
           formatUnits:
             format.units,
-
-          /*
-           * Se conserva el precio
-           * exacto de la cotización.
-           * No se reemplaza por el
-           * precio actual del catálogo.
-           */
           price:
             Number(
               item.precioUnitario,
             ) || 0,
-
           netCost:
             netCostForFormat(
               product,
               format,
             ),
-
           qty:
             Number(
               item.cantidad,
@@ -450,7 +430,6 @@ function HistorialCotizaciones() {
       },
     );
   }
-
 
   function canConvert(
     cot: CotizacionHistorial,
@@ -471,7 +450,6 @@ function HistorialCotizaciones() {
       hasItems
     );
   }
-
 
   function convertToSale(
     cot: CotizacionHistorial,
@@ -529,57 +507,40 @@ function HistorialCotizaciones() {
         version: 1,
         source:
           "cotizacion",
-
         quoteNumber:
           cot.numero,
-
         customerId:
           customer?.id ||
           null,
-
         customerName:
           String(
             cot.cliente ||
             "",
           ).trim(),
-
         customerPhone:
           String(
             cot.telefono ||
             "",
           ).trim(),
-
         customerAddress:
           String(
             cot.direccion ||
             cot.localidad ||
             "",
           ).trim(),
-
         priceType,
-
         lines,
-
-        /*
-         * El backend guarda el
-         * descuento total en pesos.
-         * Por eso se recupera como
-         * descuento tipo "monto".
-         */
         discountType:
           "monto",
-
         discountValue:
           Number(
             cot.descuento ||
             0,
           ),
-
         payment:
           paymentFromQuote(
             cot.formaPago,
           ),
-
         note:
           [
             `Cotización ${cot.numero}`,
@@ -614,7 +575,6 @@ function HistorialCotizaciones() {
     }
   }
 
-
   function openUrl(
     url?: string,
   ) {
@@ -637,7 +597,6 @@ function HistorialCotizaciones() {
       "noopener,noreferrer",
     );
   }
-
 
   return (
     <AppShell
@@ -676,12 +635,10 @@ function HistorialCotizaciones() {
                   : ""
               }`}
             />
-
             Actualizar
           </Button>
         </div>
       </section>
-
 
       <section className="mt-4 space-y-3">
         {loading && (
@@ -689,7 +646,6 @@ function HistorialCotizaciones() {
             Cargando cotizaciones...
           </div>
         )}
-
 
         {!loading &&
           filtered.map(
@@ -757,7 +713,6 @@ function HistorialCotizaciones() {
                   </div>
                 </div>
 
-
                 {normalizeText(
                   cot.estado,
                 ) ===
@@ -777,7 +732,6 @@ function HistorialCotizaciones() {
                   </div>
                 )}
 
-
                 {!Array.isArray(
                   cot.items,
                 ) ||
@@ -787,7 +741,6 @@ function HistorialCotizaciones() {
                     Cotización anterior a la conversión automática. Se puede consultar, pero la venta debe crearse manualmente.
                   </div>
                 ) : null}
-
 
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   <Button
@@ -834,7 +787,6 @@ function HistorialCotizaciones() {
                     }
                   >
                     <ShoppingCart className="mr-2 h-4 w-4" />
-
                     {normalizeText(
                       cot.estado,
                     ) ===
@@ -846,7 +798,6 @@ function HistorialCotizaciones() {
               </div>
             ),
           )}
-
 
         {!loading &&
           filtered.length ===
@@ -864,7 +815,6 @@ function HistorialCotizaciones() {
             </div>
           )}
       </section>
-
 
       <Dialog
         open={Boolean(
@@ -890,7 +840,6 @@ function HistorialCotizaciones() {
                 </DialogTitle>
               </DialogHeader>
 
-
               <div className="space-y-4 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
@@ -908,7 +857,6 @@ function HistorialCotizaciones() {
                     )}
                   </span>
                 </div>
-
 
                 <div className="rounded-xl bg-secondary p-3">
                   <p className="font-semibold">
@@ -950,7 +898,6 @@ function HistorialCotizaciones() {
                     </p>
                   )}
                 </div>
-
 
                 {Array.isArray(
                   selected.items,
@@ -1020,7 +967,6 @@ function HistorialCotizaciones() {
                   </div>
                 )}
 
-
                 <div className="space-y-1 rounded-xl border border-border p-3">
                   <DetailRow
                     label="Neto"
@@ -1069,7 +1015,6 @@ function HistorialCotizaciones() {
                   />
                 </div>
 
-
                 {selected.formaPago && (
                   <DetailRow
                     label="Forma de pago"
@@ -1078,7 +1023,6 @@ function HistorialCotizaciones() {
                     }
                   />
                 )}
-
 
                 {selected.observaciones && (
                   <div>
@@ -1091,7 +1035,6 @@ function HistorialCotizaciones() {
                     </p>
                   </div>
                 )}
-
 
                 {normalizeText(
                   selected.estado,
@@ -1120,7 +1063,6 @@ function HistorialCotizaciones() {
                   </div>
                 )}
               </div>
-
 
               <DialogFooter className="gap-2 sm:justify-between">
                 <div className="flex flex-wrap gap-2">
@@ -1155,7 +1097,6 @@ function HistorialCotizaciones() {
                   )}
                 </div>
 
-
                 <Button
                   disabled={
                     !canConvert(
@@ -1186,7 +1127,6 @@ function HistorialCotizaciones() {
     </AppShell>
   );
 }
-
 
 function DetailRow({
   label,
