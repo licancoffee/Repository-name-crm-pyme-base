@@ -37,10 +37,6 @@ export type ConversationResult = {
   reply?: string;
 };
 
-/*********************************************************
- * TEXTO
- *********************************************************/
-
 function normalizeText(
   text: string,
 ): string {
@@ -61,10 +57,6 @@ function formatClp(
     },
   ).format(value);
 }
-
-/*********************************************************
- * CIERRE / CANCELACIÓN
- *********************************************************/
 
 function isConversationExit(
   text: string,
@@ -106,10 +98,6 @@ function isCancellation(
   ].includes(normalized);
 }
 
-/*********************************************************
- * CONFIRMACIÓN
- *********************************************************/
-
 function isConfirmation(
   text: string,
 ): boolean {
@@ -128,10 +116,6 @@ function isConfirmation(
   ].includes(normalized);
 }
 
-/*********************************************************
- * EMAIL
- *********************************************************/
-
 function isValidEmail(
   text: string,
 ): boolean {
@@ -144,10 +128,6 @@ function isValidEmail(
     email,
   );
 }
-
-/*********************************************************
- * INTENCIÓN DE COMPRA
- *********************************************************/
 
 function hasPurchaseIntent(
   text: string,
@@ -178,10 +158,6 @@ function hasPurchaseIntent(
   );
 }
 
-/*********************************************************
- * CATÁLOGO GENERAL
- *********************************************************/
-
 function isCatalogQuestion(
   text: string,
 ): boolean {
@@ -204,10 +180,6 @@ function isCatalogQuestion(
       ),
   );
 }
-
-/*********************************************************
- * CONSULTA DE CATEGORÍA
- *********************************************************/
 
 function isCategoryBrowseQuestion(
   text: string,
@@ -258,10 +230,6 @@ function isCategoryBrowseQuestion(
   );
 }
 
-/*********************************************************
- * PRECIO
- *********************************************************/
-
 function isPriceQuestion(
   text: string,
 ): boolean {
@@ -285,10 +253,6 @@ function isPriceQuestion(
   );
 }
 
-/*********************************************************
- * STOCK
- *********************************************************/
-
 function isStockQuestion(
   text: string,
 ): boolean {
@@ -308,10 +272,6 @@ function isStockQuestion(
       ),
   );
 }
-
-/*********************************************************
- * STOCK EXACTO
- *********************************************************/
 
 function isExactStockQuestion(
   text: string,
@@ -334,10 +294,6 @@ function isExactStockQuestion(
       ),
   );
 }
-
-/*********************************************************
- * ENVÍOS GENERALES
- *********************************************************/
 
 function isGeneralShippingQuestion(
   text: string,
@@ -364,10 +320,6 @@ function isGeneralShippingQuestion(
       ),
   );
 }
-
-/*********************************************************
- * ENVÍOS ESPECÍFICOS
- *********************************************************/
 
 function isSpecificShippingQuestion(
   text: string,
@@ -404,10 +356,6 @@ string {
   );
 }
 
-/*********************************************************
- * CONSULTAS PARA EJECUTIVO
- *********************************************************/
-
 function isExecutiveQuestion(
   text: string,
 ): boolean {
@@ -433,10 +381,6 @@ function isExecutiveQuestion(
       ),
   );
 }
-
-/*********************************************************
- * ACCIÓN
- *********************************************************/
 
 function detectAction(
   text: string,
@@ -477,10 +421,6 @@ function detectAction(
 
   return null;
 }
-
-/*********************************************************
- * CANTIDADES
- *********************************************************/
 
 function parseNumber(
   text: string,
@@ -547,6 +487,13 @@ function parseSingleProductQuantity(
     return null;
   }
 
+  const product =
+    products[0];
+
+  if (!product) {
+    return null;
+  }
+
   const quantity =
     parseNumber(text);
 
@@ -555,7 +502,7 @@ function parseSingleProductQuantity(
   }
 
   return {
-    [products[0]]:
+    [product]:
       quantity,
   };
 }
@@ -677,10 +624,6 @@ function parseIndividualQuantities(
     : null;
 }
 
-/*********************************************************
- * CONFIRMACIÓN CANTIDADES
- *********************************************************/
-
 function buildQuantityConfirmation(
   session: WhatsAppSession,
 ): string {
@@ -701,10 +644,6 @@ function buildQuantityConfirmation(
     "¿Me indicas tu nombre o el nombre de tu negocio?"
   );
 }
-
-/*********************************************************
- * RESPUESTA COTIZACIÓN
- *********************************************************/
 
 function buildQuoteReply(
   result: {
@@ -759,10 +698,6 @@ function buildQuoteReply(
   return lines.join("\n");
 }
 
-/*********************************************************
- * CONVERSACIÓN
- *********************************************************/
-
 export async function handleWhatsAppConversation(
   phone: string,
   incomingText: string,
@@ -772,10 +707,6 @@ export async function handleWhatsAppConversation(
     await getWhatsAppSession(
       phone,
     );
-
-  /*******************************************************
-   * SALIDA GLOBAL
-   *******************************************************/
 
   if (
     session.step !== "idle" &&
@@ -793,10 +724,6 @@ export async function handleWhatsAppConversation(
         "Perfecto 😊 Cerré esta solicitud. Cuando quieras volver a consultar o cotizar, aquí estaré.",
     };
   }
-
-  /*******************************************************
-   * CONSULTAS ESPECÍFICAS → EJECUTIVO
-   *******************************************************/
 
   if (
     session.step === "idle" &&
@@ -819,10 +746,6 @@ export async function handleWhatsAppConversation(
     };
   }
 
-  /*******************************************************
-   * ENVÍOS GENERALES
-   *******************************************************/
-
   if (
     session.step === "idle" &&
     isGeneralShippingQuestion(
@@ -835,10 +758,6 @@ export async function handleWhatsAppConversation(
         buildShippingReply(),
     };
   }
-
-  /*******************************************************
-   * CATEGORÍA
-   *******************************************************/
 
   if (
     session.step === "idle" &&
@@ -875,10 +794,6 @@ export async function handleWhatsAppConversation(
     }
   }
 
-  /*******************************************************
-   * CATÁLOGO GENERAL
-   *******************************************************/
-
   if (
     session.step === "idle" &&
     isCatalogQuestion(
@@ -906,10 +821,6 @@ export async function handleWhatsAppConversation(
       };
     }
   }
-
-  /*******************************************************
-   * PRODUCTO ESPECÍFICO
-   *******************************************************/
 
   if (
     session.step === "idle"
@@ -1017,10 +928,6 @@ export async function handleWhatsAppConversation(
     }
   }
 
-  /*******************************************************
-   * CANTIDADES
-   *******************************************************/
-
   if (
     session.step ===
       "waiting_quantities"
@@ -1065,10 +972,6 @@ export async function handleWhatsAppConversation(
     };
   }
 
-  /*******************************************************
-   * NOMBRE / NEGOCIO
-   *******************************************************/
-
   if (
     session.step ===
       "waiting_customer_name"
@@ -1097,10 +1000,6 @@ export async function handleWhatsAppConversation(
         `Gracias, ${name} 😊 ¿En qué localidad necesitas la entrega?`,
     };
   }
-
-  /*******************************************************
-   * LOCALIDAD
-   *******************************************************/
 
   if (
     session.step ===
@@ -1147,10 +1046,6 @@ export async function handleWhatsAppConversation(
     };
   }
 
-  /*******************************************************
-   * CONFIRMACIÓN
-   *******************************************************/
-
   if (
     session.step ===
       "waiting_confirmation"
@@ -1193,10 +1088,6 @@ export async function handleWhatsAppConversation(
         "Solo necesito confirmar 😊 ¿Está correcto el resumen? Puedes responder “sí” o “cancelar”.",
     };
   }
-
-  /*******************************************************
-   * COTIZACIÓN O PEDIDO
-   *******************************************************/
 
   if (
     session.step ===
@@ -1245,10 +1136,6 @@ export async function handleWhatsAppConversation(
         "Perfecto 😊 Continuaremos contigo por este mismo WhatsApp para coordinar el pedido, pago y entrega.",
     };
   }
-
-  /*******************************************************
-   * EMAIL + COTIZACIÓN
-   *******************************************************/
 
   if (
     session.step ===
