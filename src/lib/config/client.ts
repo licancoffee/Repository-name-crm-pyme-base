@@ -80,6 +80,11 @@ export type IntegrationConfig = {
   appsScript: {
     enabled: boolean;
     urlEnvName: string;
+    /**
+     * Campo legado V4. Se conserva únicamente para poder leer
+     * configuraciones antiguas ya almacenadas. V3 no depende de él.
+     */
+    tokenEnvName?: string;
   };
 
   googleSheets: {
