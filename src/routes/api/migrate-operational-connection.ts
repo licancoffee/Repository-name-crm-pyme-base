@@ -82,7 +82,6 @@ async function handlePost(
     await saveOperationalConnection({
       clientId,
       url: connection.url,
-      token: connection.token,
     });
 
     return jsonResponse({
@@ -90,7 +89,7 @@ async function handlePost(
       clientId,
       migrated: true,
       message:
-        "Conexión migrada al instalador central sin exponer el token.",
+        "Conexión migrada al instalador central por CLIENT_ID y URL operativa.",
     });
   } catch (error) {
     return jsonResponse(
