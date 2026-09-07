@@ -25,7 +25,7 @@ jobs:
           BASE_URL: https://repository-name-crm-pyme-base.vercel.app
           CLIENT_ID: CL-763396002
         run: |
-          cat > /tmp/certificar-ui.mjs <<'EOF'
+          cat > certificar-ui.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const base = process.env.BASE_URL;
@@ -64,7 +64,6 @@ jobs:
               }
             }
 
-            // Simula navegación sin query después de haber recordado la empresa en localStorage.
             await page.goto(`${base}/historial-cotizaciones`, { waitUntil: 'networkidle' });
             await waitForCompany(page);
 
@@ -89,4 +88,4 @@ jobs:
             await browser.close();
           }
           EOF
-          node /tmp/certificar-ui.mjs
+          node certificar-ui.mjs
