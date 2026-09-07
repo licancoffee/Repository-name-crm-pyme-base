@@ -1,6 +1,7 @@
 import type {
   CrearCotizacionPayload,
   CrearCotizacionResult,
+  CotizacionEnvioResult,
 } from "./payload";
 
 import {
@@ -68,6 +69,22 @@ export type BuscarCotizacionResult =
       mensaje: string;
     };
 
+export type ReenviarCotizacionResult =
+  | {
+      ok: true;
+      numero: string;
+      estado: string;
+      pdfUrl?: string;
+      documentoUrl?: string;
+      envio?: CotizacionEnvioResult;
+      mensaje?: string;
+    }
+  | {
+      ok: false;
+      error: string;
+      mensaje: string;
+    };
+
 export type MarcarCotizacionConvertidaResult =
   | {
       ok: true;
@@ -87,39 +104,26 @@ async function postCotizacionesAppsScript(
   payload: Record<string, unknown>,
   requestedClientId: string,
 ): Promise<
-  | {
-      ok: true;
-      data: unknown;
-    }
-  | {
-      ok: false;
-      error: string;
-      mensaje: string;
-    }
+  | { ok: true; data: unknown }
+  | { ok: false; error: string; mensaje: string }
 > {
-  const clientId =
-    String(requestedClientId || "").trim();
+  const clientId = String(requestedClientId || "").trim();
 
   if (!clientId) {
     return {
       ok: false,
       error: "SIN_CLIENT_ID",
-      mensaje:
-        "No se pudo determinar la empresa activa para esta operación.",
+      mensaje: "No se pudo determinar la empresa activa para esta operación.",
     };
   }
 
-  const connection =
-    await resolveOperationalConnection(
-      clientId,
-    );
+  const connection = await resolveOperationalConnection(clientId);
 
   if (!connection) {
     return {
       ok: false,
       error: "SIN_CONEXION_CLIENTE",
-      mensaje:
-        "Esta empresa no tiene una conexión operativa configurada.",
+      mensaje: "Esta empresa no tiene una conexión operativa configurada.",
     };
   }
 
@@ -127,8 +131,7 @@ async function postCotizacionesAppsScript(
     return {
       ok: false,
       error: "CLIENT_ID_INCORRECTO",
-      mensaje:
-        "La conexión operativa resuelta pertenece a otra empresa.",
+      mensaje: "La conexión operativa resuelta pertenece a otra empresa.",
     };
   }
 
@@ -138,54 +141,37 @@ async function postCotizacionesAppsScript(
   };
 
   if (connection.legacyToken) {
-    payloadOperativo.token =
-      connection.legacyToken;
+    payloadOperativo.token = connection.legacyToken;
   }
 
   let response: Response;
 
   try {
-    response = await fetch(
-      connection.url,
-      {
-        method: "POST",
-        redirect: "follow",
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(
-          payloadOperativo,
-        ),
+    response = await fetch(connection.url, {
+      method: "POST",
+      redirect: "follow",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
       },
-    );
+      body: JSON.stringify(payloadOperativo),
+    });
   } catch (error) {
-    console.error(
-      "Cotizaciones Apps Script fetch error",
-      error,
-    );
-
+    console.error("Cotizaciones Apps Script fetch error", error);
     return {
       ok: false,
       error: "SIN_CONEXION",
-      mensaje:
-        "No se pudo contactar el sistema de cotizaciones.",
+      mensaje: "No se pudo contactar el sistema de cotizaciones.",
     };
   }
 
-  const text =
-    await response.text();
+  const text = await response.text();
 
   if (!response.ok) {
-    console.error(
-      `Cotizaciones Apps Script HTTP ${response.status}: ${text.slice(0, 500)}`,
-    );
-
+    console.error(`Cotizaciones Apps Script HTTP ${response.status}: ${text.slice(0, 500)}`);
     return {
       ok: false,
       error: "ERROR_HTTP",
-      mensaje:
-        "El sistema de cotizaciones respondió con error.",
+      mensaje: "El sistema de cotizaciones respondió con error.",
     };
   }
 
@@ -194,67 +180,41 @@ async function postCotizacionesAppsScript(
   try {
     respuesta = JSON.parse(text);
   } catch (error) {
-    console.error(
-      "Respuesta no JSON de cotizaciones:",
-      text.slice(0, 500),
-      error,
-    );
-
+    console.error("Respuesta no JSON de cotizaciones:", text.slice(0, 500), error);
     return {
       ok: false,
       error: "RESPUESTA_INVALIDA",
-      mensaje:
-        "El sistema de cotizaciones respondió en un formato inesperado.",
+      mensaje: "El sistema de cotizaciones respondió en un formato inesperado.",
     };
   }
 
-  if (
-    respuesta &&
-    respuesta.clientId &&
-    respuesta.clientId !== clientId
-  ) {
+  if (respuesta && respuesta.clientId && respuesta.clientId !== clientId) {
     return {
       ok: false,
       error: "CLIENT_ID_INCORRECTO",
-      mensaje:
-        "El backend operativo respondió con otro CLIENT_ID.",
+      mensaje: "El backend operativo respondió con otro CLIENT_ID.",
     };
   }
 
-  if (
-    respuesta &&
-    respuesta.ok === true
-  ) {
+  if (respuesta && respuesta.ok === true) {
     return {
       ok: true,
-      data:
-        respuesta.data !== undefined
-          ? respuesta.data
-          : respuesta,
+      data: respuesta.data !== undefined ? respuesta.data : respuesta,
     };
   }
 
-  if (
-    respuesta &&
-    respuesta.ok === false
-  ) {
+  if (respuesta && respuesta.ok === false) {
     return {
       ok: false,
-      error:
-        respuesta.error ||
-        "ERROR_COTIZACION",
-      mensaje:
-        respuesta.mensaje ||
-        respuesta.error ||
-        "La solicitud de cotizaciones fue rechazada.",
+      error: respuesta.error || "ERROR_COTIZACION",
+      mensaje: respuesta.mensaje || respuesta.error || "La solicitud de cotizaciones fue rechazada.",
     };
   }
 
   return {
     ok: false,
     error: "RESPUESTA_INVALIDA",
-    mensaje:
-      "El sistema de cotizaciones respondió en un formato no reconocido.",
+    mensaje: "El sistema de cotizaciones respondió en un formato no reconocido.",
   };
 }
 
@@ -262,11 +222,10 @@ export async function crearCotizacionEnAppsScript(
   payload: CrearCotizacionPayload,
   clientId: string,
 ): Promise<CrearCotizacionResult> {
-  const respuesta =
-    await postCotizacionesAppsScript(
-      payload as unknown as Record<string, unknown>,
-      clientId,
-    );
+  const respuesta = await postCotizacionesAppsScript(
+    payload as unknown as Record<string, unknown>,
+    clientId,
+  );
 
   if (!respuesta.ok) {
     return {
@@ -277,7 +236,6 @@ export async function crearCotizacionEnAppsScript(
   }
 
   const data = respuesta.data as any;
-
   if (data && typeof data === "object") {
     return {
       ok: true,
@@ -288,140 +246,33 @@ export async function crearCotizacionEnAppsScript(
   return {
     ok: false,
     error: "RESPUESTA_INVALIDA",
-    mensaje:
-      "No fue posible interpretar la cotización creada.",
+    mensaje: "No fue posible interpretar la cotización creada.",
   };
 }
 
-export async function listarCotizacionesEnAppsScript(
-  clientId: string,
-): Promise<ListarCotizacionesResult> {
-  const respuesta =
-    await postCotizacionesAppsScript(
-      {
-        action: "listarCotizaciones",
-      },
-      clientId,
-    );
-
-  if (!respuesta.ok) {
-    return {
-      ok: false,
-      error: respuesta.error,
-      mensaje: respuesta.mensaje,
-    };
-  }
-
-  const cotizaciones =
-    Array.isArray(respuesta.data)
-      ? respuesta.data
-      : [];
-
-  return {
-    ok: true,
-    cotizaciones:
-      cotizaciones as CotizacionHistorial[],
-  };
-}
-
-export async function buscarCotizacionEnAppsScript(
+export async function reenviarCotizacionEnAppsScript(
   numero: string,
   clientId: string,
-): Promise<BuscarCotizacionResult> {
-  const numeroNormalizado =
-    String(numero || "")
-      .trim()
-      .toUpperCase();
+  email?: string,
+): Promise<ReenviarCotizacionResult> {
+  const numeroNormalizado = String(numero || "").trim().toUpperCase();
 
   if (!numeroNormalizado) {
     return {
       ok: false,
       error: "SIN_NUMERO",
-      mensaje:
-        "Debes indicar un número de cotización.",
+      mensaje: "Debes indicar un número de cotización.",
     };
   }
 
-  const respuesta =
-    await postCotizacionesAppsScript(
-      {
-        action: "buscarCotizacion",
-        numero: numeroNormalizado,
-      },
-      clientId,
-    );
-
-  if (!respuesta.ok) {
-    return {
-      ok: false,
-      error: respuesta.error,
-      mensaje: respuesta.mensaje,
-    };
-  }
-
-  if (
-    !respuesta.data ||
-    typeof respuesta.data !== "object" ||
-    Array.isArray(respuesta.data)
-  ) {
-    return {
-      ok: false,
-      error: "COTIZACION_NO_ENCONTRADA",
-      mensaje:
-        `No se encontró la cotización ${numeroNormalizado}.`,
-    };
-  }
-
-  return {
-    ok: true,
-    cotizacion:
-      respuesta.data as CotizacionHistorial,
-  };
-}
-
-export async function marcarCotizacionConvertidaEnAppsScript(
-  numero: string,
-  ventaId: string,
-  clientId: string,
-): Promise<MarcarCotizacionConvertidaResult> {
-  const numeroNormalizado =
-    String(numero || "")
-      .trim()
-      .toUpperCase();
-
-  const ventaIdNormalizado =
-    String(ventaId || "").trim();
-
-  if (!numeroNormalizado) {
-    return {
-      ok: false,
-      error: "SIN_NUMERO",
-      mensaje:
-        "Falta el número de cotización.",
-    };
-  }
-
-  if (!ventaIdNormalizado) {
-    return {
-      ok: false,
-      error: "SIN_VENTA_ID",
-      mensaje:
-        "Falta el identificador de la venta.",
-    };
-  }
-
-  const respuesta =
-    await postCotizacionesAppsScript(
-      {
-        action:
-          "marcarCotizacionConvertida",
-        numero:
-          numeroNormalizado,
-        ventaId:
-          ventaIdNormalizado,
-      },
-      clientId,
-    );
+  const respuesta = await postCotizacionesAppsScript(
+    {
+      action: "reenviarCotizacion",
+      numero: numeroNormalizado,
+      ...(email?.trim() ? { email: email.trim() } : {}),
+    },
+    clientId,
+  );
 
   if (!respuesta.ok) {
     return {
@@ -432,38 +283,146 @@ export async function marcarCotizacionConvertidaEnAppsScript(
   }
 
   const data = respuesta.data as any;
-
   if (!data || typeof data !== "object") {
     return {
       ok: false,
       error: "RESPUESTA_INVALIDA",
-      mensaje:
-        "No fue posible confirmar la conversión de la cotización.",
+      mensaje: "No fue posible interpretar el reenvío de la cotización.",
     };
   }
 
   return {
     ok: true,
-    numero:
-      String(
-        data.numero ||
-        numeroNormalizado,
-      ),
-    estado:
-      String(
-        data.estado ||
-        "CONVERTIDA",
-      ),
-    ventaId:
-      String(
-        data.ventaId ||
-        ventaIdNormalizado,
-      ),
-    fechaConversion:
-      data.fechaConversion
-        ? String(data.fechaConversion)
-        : undefined,
-    duplicada:
-      Boolean(data.duplicada),
+    numero: String(data.numero || numeroNormalizado),
+    estado: String(data.estado || "GENERADA_SIN_ENVIO"),
+    pdfUrl: data.pdfUrl ? String(data.pdfUrl) : undefined,
+    documentoUrl: data.documentoUrl ? String(data.documentoUrl) : undefined,
+    envio: data.envio as CotizacionEnvioResult | undefined,
+    mensaje: data.mensaje ? String(data.mensaje) : undefined,
+  };
+}
+
+export async function listarCotizacionesEnAppsScript(
+  clientId: string,
+): Promise<ListarCotizacionesResult> {
+  const respuesta = await postCotizacionesAppsScript(
+    { action: "listarCotizaciones" },
+    clientId,
+  );
+
+  if (!respuesta.ok) {
+    return {
+      ok: false,
+      error: respuesta.error,
+      mensaje: respuesta.mensaje,
+    };
+  }
+
+  return {
+    ok: true,
+    cotizaciones: Array.isArray(respuesta.data)
+      ? (respuesta.data as CotizacionHistorial[])
+      : [],
+  };
+}
+
+export async function buscarCotizacionEnAppsScript(
+  numero: string,
+  clientId: string,
+): Promise<BuscarCotizacionResult> {
+  const numeroNormalizado = String(numero || "").trim().toUpperCase();
+
+  if (!numeroNormalizado) {
+    return {
+      ok: false,
+      error: "SIN_NUMERO",
+      mensaje: "Debes indicar un número de cotización.",
+    };
+  }
+
+  const respuesta = await postCotizacionesAppsScript(
+    { action: "buscarCotizacion", numero: numeroNormalizado },
+    clientId,
+  );
+
+  if (!respuesta.ok) {
+    return {
+      ok: false,
+      error: respuesta.error,
+      mensaje: respuesta.mensaje,
+    };
+  }
+
+  if (!respuesta.data || typeof respuesta.data !== "object" || Array.isArray(respuesta.data)) {
+    return {
+      ok: false,
+      error: "COTIZACION_NO_ENCONTRADA",
+      mensaje: `No se encontró la cotización ${numeroNormalizado}.`,
+    };
+  }
+
+  return {
+    ok: true,
+    cotizacion: respuesta.data as CotizacionHistorial,
+  };
+}
+
+export async function marcarCotizacionConvertidaEnAppsScript(
+  numero: string,
+  ventaId: string,
+  clientId: string,
+): Promise<MarcarCotizacionConvertidaResult> {
+  const numeroNormalizado = String(numero || "").trim().toUpperCase();
+  const ventaIdNormalizado = String(ventaId || "").trim();
+
+  if (!numeroNormalizado) {
+    return {
+      ok: false,
+      error: "SIN_NUMERO",
+      mensaje: "Falta el número de cotización.",
+    };
+  }
+
+  if (!ventaIdNormalizado) {
+    return {
+      ok: false,
+      error: "SIN_VENTA_ID",
+      mensaje: "Falta el identificador de la venta.",
+    };
+  }
+
+  const respuesta = await postCotizacionesAppsScript(
+    {
+      action: "marcarCotizacionConvertida",
+      numero: numeroNormalizado,
+      ventaId: ventaIdNormalizado,
+    },
+    clientId,
+  );
+
+  if (!respuesta.ok) {
+    return {
+      ok: false,
+      error: respuesta.error,
+      mensaje: respuesta.mensaje,
+    };
+  }
+
+  const data = respuesta.data as any;
+  if (!data || typeof data !== "object") {
+    return {
+      ok: false,
+      error: "RESPUESTA_INVALIDA",
+      mensaje: "No fue posible confirmar la conversión de la cotización.",
+    };
+  }
+
+  return {
+    ok: true,
+    numero: String(data.numero || numeroNormalizado),
+    estado: String(data.estado || "CONVERTIDA"),
+    ventaId: String(data.ventaId || ventaIdNormalizado),
+    fechaConversion: data.fechaConversion ? String(data.fechaConversion) : undefined,
+    duplicada: Boolean(data.duplicada),
   };
 }
