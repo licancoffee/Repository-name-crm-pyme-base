@@ -1,5 +1,3 @@
-import { Link } from "@tanstack/react-router";
-
 import {
   Building2,
   ClipboardList,
@@ -19,6 +17,10 @@ import {
 import {
   clientConfig,
 } from "@/lib/config/client";
+
+import {
+  getActiveClientId,
+} from "@/lib/config/active-client";
 
 import {
   useErpStatus,
@@ -179,6 +181,31 @@ export function AppShell({
       branding.accentColor,
   } as CSSProperties;
 
+  const activeClientId =
+    typeof window !== "undefined"
+      ? getActiveClientId()
+      : "";
+
+  const currentPath =
+    typeof window !== "undefined"
+      ? window.location.pathname
+      : "";
+
+  function hrefFor(
+    path: string,
+  ) {
+    if (!activeClientId) {
+      return path;
+    }
+
+    const separator =
+      path.includes("?")
+        ? "&"
+        : "?";
+
+    return `${path}${separator}clientId=${encodeURIComponent(activeClientId)}`;
+  }
+
   return (
     <div
       className="min-h-screen bg-background pb-24"
@@ -247,30 +274,38 @@ export function AppShell({
             }}
           >
             {visibleNavItems.map(
-              (item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  activeOptions={{
-                    exact:
-                      item.to ===
-                      "/",
-                  }}
-                  className="flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium text-muted-foreground transition-colors data-[status=active]:font-semibold sm:text-[11px]"
-                  activeProps={{
-                    style: {
-                      color:
-                        branding.accentColor,
-                    },
-                  }}
-                >
-                  <item.icon
-                    className="h-[19px] w-[19px]"
-                    strokeWidth={1.8}
-                  />
-                  {item.label}
-                </Link>
-              ),
+              (item) => {
+                const isActive =
+                  item.to === "/"
+                    ? currentPath === "/"
+                    : currentPath.startsWith(item.to);
+
+                return (
+                  <a
+                    key={item.to}
+                    href={hrefFor(item.to)}
+                    className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors sm:text-[11px] ${
+                      isActive
+                        ? "font-semibold"
+                        : "text-muted-foreground"
+                    }`}
+                    style={
+                      isActive
+                        ? {
+                            color:
+                              branding.accentColor,
+                          }
+                        : undefined
+                    }
+                  >
+                    <item.icon
+                      className="h-[19px] w-[19px]"
+                      strokeWidth={1.8}
+                    />
+                    {item.label}
+                  </a>
+                );
+              },
             )}
           </div>
         </nav>
