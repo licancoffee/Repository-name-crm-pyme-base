@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   FileText,
+  MessageCircle,
   Minus,
   Plus,
   Search,
@@ -51,6 +52,10 @@ import {
 import {
   crearCotizacion,
 } from "@/lib/crm/cotizaciones/cotizaciones.functions";
+
+import {
+  openQuoteWhatsapp,
+} from "@/lib/crm/cotizaciones/whatsapp";
 
 import type {
   Customer,
@@ -932,6 +937,31 @@ function NuevaCotizacion() {
     }
   }
 
+  function shareQuoteWhatsapp() {
+    if (!createdQuote?.numero) {
+      toast.error(
+        "Primero debes generar la cotización.",
+      );
+      return;
+    }
+
+    openQuoteWhatsapp({
+      numero: createdQuote.numero,
+      cliente: customerName.trim(),
+      telefono: customerPhone.trim(),
+      total: totals.total,
+      pdfUrl: createdQuote.pdfUrl,
+      formaPago: paymentLabels[payment] ?? payment,
+      observaciones: note.trim() || undefined,
+      items: lines.map((line) => ({
+        producto: line.name,
+        formato: line.format,
+        cantidad: line.qty,
+        precioUnitario: line.price,
+      })),
+    });
+  }
+
   function convertToSale() {
     if (!createdQuote) {
       toast.error(
@@ -1710,13 +1740,24 @@ function NuevaCotizacion() {
               confirmes Guardar venta.
             </p>
 
-            <Button
-              className="mt-3 h-12 w-full"
-              onClick={convertToSale}
-            >
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Convertir en venta
-            </Button>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Button
+                variant="outline"
+                className="h-12 w-full"
+                onClick={shareQuoteWhatsapp}
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Enviar por WhatsApp
+              </Button>
+
+              <Button
+                className="h-12 w-full"
+                onClick={convertToSale}
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                Convertir en venta
+              </Button>
+            </div>
           </div>
         )}
 

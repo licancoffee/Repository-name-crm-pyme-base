@@ -4,6 +4,8 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Mail,
+  MessageCircle,
   RefreshCw,
   Search,
   ShoppingCart,
@@ -29,7 +31,12 @@ import { useDB, visibleSales } from "@/lib/crm/store";
 
 import {
   listarCotizaciones,
+  reenviarCotizacion,
 } from "@/lib/crm/cotizaciones/cotizaciones.functions";
+
+import {
+  openQuoteWhatsapp,
+} from "@/lib/crm/cotizaciones/whatsapp";
 
 import type {
   CotizacionHistorial,
@@ -203,6 +210,9 @@ function HistorialCotizaciones() {
 
   const [converting, setConverting] =
     useState(false);
+
+  const [resendingQuote, setResendingQuote] =
+    useState<string | null>(null);
 
   async function loadQuotes() {
     setLoading(true);
@@ -575,6 +585,69 @@ function HistorialCotizaciones() {
     }
   }
 
+  function shareQuoteWhatsapp(
+    cot: CotizacionHistorial,
+  ) {
+    const items = Array.isArray(cot.items) ? cot.items : [];
+
+    openQuoteWhatsapp({
+      numero: cot.numero,
+      cliente: cot.cliente || "Cliente",
+      telefono: cot.telefono || "",
+      total: Number(cot.total || 0),
+      pdfUrl: cot.pdfUrl,
+      formaPago: cot.formaPago,
+      observaciones: cot.observaciones,
+      items: items.map((item) => ({
+        producto: item.producto,
+        formato: item.formato,
+        cantidad: Number(item.cantidad || 0),
+        precioUnitario: Number(item.precioUnitario || 0),
+      })),
+    });
+  }
+
+  async function resendQuoteEmail(
+    cot: CotizacionHistorial,
+  ) {
+    if (resendingQuote) return;
+
+    if (!cot.email?.trim()) {
+      toast.error("La cotización no tiene correo de destinatario.");
+      return;
+    }
+
+    setResendingQuote(cot.numero);
+
+    try {
+      const result = await reenviarCotizacion({
+        data: {
+          numero: cot.numero,
+          email: cot.email.trim(),
+        },
+      });
+
+      if (!result.ok) {
+        throw new Error(
+          result.mensaje || result.error || "No fue posible reenviar la cotización.",
+        );
+      }
+
+      toast.success(
+        `Cotización ${cot.numero} enviada nuevamente por correo.`,
+      );
+      await loadQuotes();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No fue posible reenviar la cotización.",
+      );
+    } finally {
+      setResendingQuote(null);
+    }
+  }
+
   function openUrl(
     url?: string,
   ) {
@@ -771,6 +844,30 @@ function HistorialCotizaciones() {
                     <FileText className="mr-2 h-4 w-4" />
                     PDF
                   </Button>
+
+                  <Button
+                    variant="outline"
+                    className="h-11"
+                    disabled={!cot.telefono}
+                    onClick={() =>
+                      shareQuoteWhatsapp(cot)
+                    }
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </Button>
+
+                  {normalizeText(cot.estado) === "generada_sin_envio" && (
+                    <Button
+                      variant="outline"
+                      className="h-11"
+                      disabled={resendingQuote === cot.numero || !cot.email}
+                      onClick={() => void resendQuoteEmail(cot)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      {resendingQuote === cot.numero ? "Reenviando..." : "Reenviar correo"}
+                    </Button>
+                  )}
 
                   <Button
                     className="col-span-2 h-11 sm:col-auto"
@@ -1097,28 +1194,50 @@ function HistorialCotizaciones() {
                   )}
                 </div>
 
-                <Button
-                  disabled={
-                    !canConvert(
-                      selected,
-                    ) ||
-                    converting
-                  }
-                  onClick={() =>
-                    convertToSale(
-                      selected,
-                    )
-                  }
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!selected.telefono}
+                    onClick={() => shareQuoteWhatsapp(selected)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </Button>
 
-                  {normalizeText(
-                    selected.estado,
-                  ) ===
-                  "convertida"
-                    ? "Ya convertida"
-                    : "Convertir en venta"}
-                </Button>
+                  {normalizeText(selected.estado) === "generada_sin_envio" && (
+                    <Button
+                      variant="outline"
+                      disabled={resendingQuote === selected.numero || !selected.email}
+                      onClick={() => void resendQuoteEmail(selected)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      {resendingQuote === selected.numero ? "Reenviando..." : "Reenviar correo"}
+                    </Button>
+                  )}
+
+                  <Button
+                    disabled={
+                      !canConvert(
+                        selected,
+                      ) ||
+                      converting
+                    }
+                    onClick={() =>
+                      convertToSale(
+                        selected,
+                      )
+                    }
+                  >
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+
+                    {normalizeText(
+                      selected.estado,
+                    ) ===
+                    "convertida"
+                      ? "Ya convertida"
+                      : "Convertir en venta"}
+                  </Button>
+                </div>
               </DialogFooter>
             </>
           )}
