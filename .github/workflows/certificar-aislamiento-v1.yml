@@ -1,0 +1,33 @@
+name: Certificar aislamiento V1
+
+on:
+  push:
+    branches:
+      - respaldo-instalador-avanzado
+    paths:
+      - docs/CERTIFICAR_AISLAMIENTO.trigger
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar CLIENT_ID correcto e incorrecto
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://script.google.com/macros/s/AKfycbz7VdWsZweq5ncUhMUIftgWqnutIVlEZali6qx_dwmyHP2cth1wyrmzP_EJnEmKI50PEw/exec'
+          OK=$(curl -fsSL "$BASE?action=ping&clientId=CL-763396002")
+          BAD=$(curl -fsSL "$BASE?action=ping&clientId=CL-763394867")
+          echo "Correcto: $OK"
+          echo "Incorrecto: $BAD"
+          python - <<'PY' "$OK" "$BAD"
+          import json, sys
+          ok=json.loads(sys.argv[1]); bad=json.loads(sys.argv[2])
+          assert ok.get('ok') is True, ok
+          assert ok.get('version') == '1.4.0', ok
+          assert ok.get('clientId') == 'CL-763396002', ok
+          assert bad.get('ok') is False, bad
+          assert bad.get('error') == 'CLIENT_ID_INCORRECTO', bad
+          assert bad.get('clientId') == 'CL-763396002', bad
+          print('AISLAMIENTO_OK')
+          PY
