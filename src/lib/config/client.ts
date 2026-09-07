@@ -202,9 +202,9 @@ export const clientConfig =
 /**
  * Aplica la configuración de una empresa cargada en tiempo de ejecución.
  *
- * Se mantiene la identidad del objeto `clientConfig` para que todos los
- * módulos que ya lo importaron observen los nuevos valores sin conservar
- * datos de una empresa anterior.
+ * Mantiene vivas las referencias de todos los objetos anidados para que
+ * módulos que importaron alias como `companyConfig` o `commercialConfig`
+ * observen inmediatamente la empresa activa y nunca queden apuntando a DEMO.
  */
 export function applyRuntimeClientConfig(
   runtimeConfig:
@@ -219,9 +219,52 @@ export function applyRuntimeClientConfig(
       runtimeConfig,
     );
 
+  clientConfig.setupVersion =
+    next.setupVersion;
+
   Object.assign(
-    clientConfig,
-    next,
+    clientConfig.company,
+    next.company,
+  );
+
+  Object.assign(
+    clientConfig.branding,
+    next.branding,
+  );
+
+  Object.assign(
+    clientConfig.commercial,
+    next.commercial,
+  );
+
+  Object.assign(
+    clientConfig.modules,
+    next.modules,
+  );
+
+  Object.assign(
+    clientConfig.payments,
+    next.payments,
+  );
+
+  Object.assign(
+    clientConfig.shipping,
+    next.shipping,
+  );
+
+  Object.assign(
+    clientConfig.whatsapp,
+    next.whatsapp,
+  );
+
+  Object.assign(
+    clientConfig.integrations.appsScript,
+    next.integrations.appsScript,
+  );
+
+  Object.assign(
+    clientConfig.integrations.googleSheets,
+    next.integrations.googleSheets,
   );
 
   return clientConfig;
