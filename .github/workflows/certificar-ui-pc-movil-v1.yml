@@ -1,0 +1,92 @@
+name: Certificar UI PC móvil V1
+
+on:
+  push:
+    branches:
+      - respaldo-instalador-avanzado
+    paths:
+      - docs/CERTIFICAR_UI_PC_MOVIL_20260907.trigger
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Certificar navegación e identidad en PC y móvil
+        env:
+          BASE_URL: https://repository-name-crm-pyme-base.vercel.app
+          CLIENT_ID: CL-763396002
+        run: |
+          cat > /tmp/certificar-ui.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const base = process.env.BASE_URL;
+          const clientId = process.env.CLIENT_ID;
+          const routes = ['/', '/nueva-venta', '/cotizaciones', '/clientes', '/inventario', '/historial'];
+
+          async function waitForCompany(page) {
+            await page.waitForLoadState('domcontentloaded');
+            await page.waitForTimeout(1200);
+            const body = await page.locator('body').innerText();
+            if (!body.includes('EMPRESA PRUEBA 3')) throw new Error('No aparece EMPRESA PRUEBA 3');
+            if (body.includes('EMPRESA DEMO')) throw new Error('Aparece EMPRESA DEMO');
+          }
+
+          async function runProfile(browser, name, viewport) {
+            const context = await browser.newContext({ viewport });
+            const page = await context.newPage();
+
+            await page.goto(`${base}/?clientId=${encodeURIComponent(clientId)}`, { waitUntil: 'networkidle' });
+            await waitForCompany(page);
+
+            const links = await page.locator('nav a').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('href')));
+            if (links.length < 6) throw new Error(`${name}: navegación incompleta: ${JSON.stringify(links)}`);
+            for (const href of links) {
+              if (!href || !href.includes(`clientId=${clientId}`)) {
+                throw new Error(`${name}: enlace perdió CLIENT_ID: ${href}`);
+              }
+            }
+
+            for (const route of routes) {
+              await page.goto(`${base}${route}?clientId=${encodeURIComponent(clientId)}`, { waitUntil: 'networkidle' });
+              await waitForCompany(page);
+              const url = new URL(page.url());
+              if (url.searchParams.get('clientId') !== clientId) {
+                throw new Error(`${name}: ${route} perdió CLIENT_ID en URL: ${page.url()}`);
+              }
+            }
+
+            // Simula navegación sin query después de haber recordado la empresa en localStorage.
+            await page.goto(`${base}/historial-cotizaciones`, { waitUntil: 'networkidle' });
+            await waitForCompany(page);
+
+            const identity = await page.evaluate(() => ({
+              clientId: localStorage.getItem('crm-pyme-active-client-id'),
+              title: document.body.innerText.includes('EMPRESA PRUEBA 3'),
+            }));
+            if (identity.clientId !== clientId || identity.title !== true) {
+              throw new Error(`${name}: identidad persistida incorrecta: ${JSON.stringify(identity)}`);
+            }
+
+            console.log(`${name}_OK`);
+            await context.close();
+          }
+
+          const browser = await chromium.launch({ headless: true });
+          try {
+            await runProfile(browser, 'PC', { width: 1440, height: 900 });
+            await runProfile(browser, 'MOVIL', { width: 390, height: 844 });
+            console.log('PC_MOVIL_NAVEGACION_IDENTIDAD_OK');
+          } finally {
+            await browser.close();
+          }
+          EOF
+          node /tmp/certificar-ui.mjs
