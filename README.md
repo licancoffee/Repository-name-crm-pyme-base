@@ -1,84 +1,135 @@
-# Lican Sip & Sell
+# CRM Comercial PyME Base — V1
 
-Crea una aplicación web móvil llamada “Lican Coffee CRM” para probar mañana desde un teléfono. Debe ser una primera versión funcional, rápida y clara, en español, con diseño profesional inspirado en café premium: fondo claro, tonos café, beige y acentos turquesa de la marca. Prioriza usabilidad móvil, botones grandes y navegación simple.
+CRM Comercial PyME Base es una aplicación web multiempresa para gestión comercial de pequeñas y medianas empresas. La V1 está orientada a ventas, clientes, inventario, cotizaciones y operación desde PC o móvil.
 
-Objetivo de esta versión: permitir crear una venta de prueba sin afectar todavía el ERP real. Guardar datos en localStorage para que persistan en el navegador. No usar autenticación ni base de datos en esta primera versión.
+## Estado
 
-Pantallas:
-1. Inicio con accesos: Nueva venta, Clientes, Inventario, Historial.
-2. Nueva venta:
-- Buscar o seleccionar cliente existente.
-- O crear cliente nuevo con nombre, teléfono, dirección/localidad y observación.
-- Agregar múltiples productos desde catálogo.
-- Mostrar producto, formato, precio IVA incluido, stock, cantidad y subtotal.
-- Permitir editar cantidad y eliminar línea.
-- Descuento opcional en pesos o porcentaje.
-- Forma de pago: efectivo, transferencia, débito, crédito, pendiente.
-- Observación de venta.
-- Resumen visible: subtotal, descuento, total, costo estimado, utilidad neta estimada y margen estimado.
-- Validar que no se pueda superar el stock disponible.
-- Botón “Guardar venta de prueba”. Al guardar: generar ID único, fecha/hora, guardar en historial y descontar stock localmente.
-- Botón “Comprobante WhatsApp” que abra wa.me con un texto ordenado con cliente, productos, cantidades, total y forma de pago. Usar teléfono del cliente si existe; si no, abrir sin destinatario.
-- Bloquear doble clic mientras se procesa.
-3. Clientes:
-- Lista, buscador, ficha básica, total de compras y última compra según historial local.
-4. Inventario:
-- Lista de productos con stock y estado: OK, BAJO, CRÍTICO, SIN STOCK.
-- Buscador y filtros por categoría.
-5. Historial:
-- Lista de ventas guardadas, detalle, total, forma de pago y botón para reenviar comprobante por WhatsApp.
-- Permitir anular una venta de prueba y devolver automáticamente el stock, dejando registro de estado ANULADA.
+**V1 comercial certificada.**
 
-Catálogo inicial exacto:
-- Chocolate | Mezclas | 1 kg | costo neto 3706 | precio 11900 | stock 29.5 | mínimo 3
-- Cappuccino Tradicional | Mezclas | 1 kg | costo neto 4874 | precio 12900 | stock 16 | mínimo 3
-- Cappuccino Vainilla | Mezclas | 1 kg | costo neto 4748 | precio 12900 | stock 9 | mínimo 3
-- Mokachino | Mezclas | 1 kg | costo neto 4555 | precio 12900 | stock 10 | mínimo 3
-- Té Chai | Mezclas | 1 kg | costo neto 3756 | precio 13500 | stock 12 | mínimo 3
-- Crema Sabor Leche | Mezclas | 1 kg | costo neto 3706 | precio 11900 | stock 7 | mínimo 5
-- Cappuccino Avellana | Mezclas | 1 kg | costo neto 5500 | precio 12900 | stock 20 | mínimo 3
-- Cappuccino Trufa | Mezclas | 1 kg | costo neto 5500 | precio 12900 | stock 10 | mínimo 3
-- Cruzeiro Clásico Instantáneo | Café soluble | 500 g | costo neto 7065 | precio 14900 | stock 22 | mínimo 6
-- Patagonia Intenso | Café grano/molido | 1 kg | costo neto 18044 | precio 34990 | stock 1 | mínimo 1
-- Patagonia Intenso Grano | Café grano | 250 g | costo neto 6129 | precio 11990 | stock 2 | mínimo 1
-- Patagonia Intenso Molido | Café molido | 250 g | costo neto 6129 | precio 11990 | stock 0 | mínimo 1
-- Santa Rosa | Café grano/molido | 1 kg | costo neto 17746 | precio 34990 | stock 1 | mínimo 1
-- Santa Rosa Grano | Café grano | 250 g | costo neto 5783 | precio 10990 | stock 2 | mínimo 1
-- Santa Rosa Molido | Café molido | 250 g | costo neto 5783 | precio 10990 | stock 2 | mínimo 1
-- Manizales Grano | Café grano | 250 g | costo neto 5037 | precio 10990 | stock 2 | mínimo 1
-- Manizales Molido | Café molido | 250 g | costo neto 5037 | precio 10990 | stock 1 | mínimo 1
-- Los Andes Grano | Café grano | 250 g | costo neto 4444 | precio 11990 | stock 2 | mínimo 1
-- Los Andes Molido | Café molido | 250 g | costo neto 4444 | precio 11990 | stock 0 | mínimo 1
-- Revolvedores | Insumos | Caja 1.000 unidades | costo neto 3000 | precio 5490 | stock 10 cajas | mínimo 2
+La versión actual fue validada con una empresa de prueba independiente, incluyendo instalación, operación, aislamiento por empresa, navegación PC/móvil y flujo completo de cotizaciones y ventas.
 
-Cliente inicial para prueba:
-- María José — Espacio Blue
-- Teléfono: 920376351
-- Dirección: Vicente Reyes 794, Villarrica
+## Alcance funcional V1
 
-Formato monetario chileno sin decimales, excepto stock que puede tener decimales. El margen debe calcularse sobre venta neta sin IVA: precio bruto / 1,19; utilidad neta = venta neta - costo neto. Si hay descuento, distribuirlo proporcionalmente entre líneas para estimar utilidad y margen.
+- Dashboard comercial.
+- Gestión de clientes.
+- Inventario y control de stock.
+- Nueva venta y descuento de inventario.
+- Historial de ventas.
+- Anulación de venta con devolución de stock.
+- Protección contra doble anulación.
+- Nueva cotización.
+- Historial de cotizaciones.
+- PDF de cotización.
+- Envío por correo con PDF adjunto.
+- Reenvío de cotización sin duplicarla.
+- Compartición por WhatsApp.
+- Conversión de cotización a venta.
+- Instalador multiempresa de 4 pasos.
+- Identidad separada por `CLIENT_ID`.
+- Operación responsive en PC y móvil.
 
-Incluye una advertencia visible en la cabecera: “MODO PRUEBA — No registra en el ERP real”.
+## Arquitectura
 
-Debe quedar totalmente navegable y usable en móvil y escritorio. Usa React, TypeScript, Tailwind y componentes shadcn/ui. No dejes botones de muestra sin funcionar.
+El producto separa configuración e instalación de la operación de cada empresa:
 
-This project was built with [Lovable](https://lovable.dev).
+1. **Instalador central**: registra empresa, productos, clientes y conexión operativa.
+2. **Frontend CRM**: aplicación React/TypeScript desplegada en Vercel.
+3. **Backend operativo por empresa**: Google Apps Script.
+4. **Hoja operativa por empresa**: Google Sheets para ventas, inventario, movimientos y cotizaciones.
+5. **Aislamiento**: cada backend valida estrictamente su `CLIENT_ID`.
 
-## Build with Lovable
+Las nuevas instalaciones no requieren un `CRM_API_TOKEN` operativo por empresa. El instalador central mantiene su propia protección mediante `SETUP_STORAGE_TOKEN`.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/22f8683f-ddb9-4301-9766-4e6ff950e762).
+## Backend operativo
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Versión certificada: **V4 / 1.4.0**
 
-## Development
+Archivo completo:
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+`docs/apps-script/CRMBaseOperativoV4.gs`
+
+El backend V4 incluye ventas, anulaciones, inventario, movimientos, cotizaciones, PDF, correo, reenvío y conversión a venta.
+
+## Instalación de una nueva PyME
+
+El flujo comercial de instalación es:
+
+1. Empresa.
+2. Productos.
+3. Clientes.
+4. Conexión operativa.
+
+El CRM solo se considera listo cuando los cuatro pasos están completos y la conexión operativa valida el `CLIENT_ID` correcto.
+
+Ver procedimiento detallado en:
+
+`docs/ONBOARDING_CLIENTE_V1.md`
+
+## Certificación V1
+
+La V1 fue probada en los siguientes puntos críticos:
+
+- Venta → items → movimiento → inventario.
+- Anulación → reposición de stock.
+- Doble anulación sin doble reposición.
+- Cotización sin afectar inventario.
+- Generación de PDF.
+- Envío de correo.
+- Reenvío de correo.
+- WhatsApp con identidad de empresa correcta.
+- Conversión cotización → venta.
+- Rechazo de `CLIENT_ID` incorrecto.
+- Navegación con identidad persistente.
+- Perfil escritorio.
+- Perfil móvil.
+- Typecheck y build.
+
+Checklist técnico:
+
+`docs/CRM_PYME_CHECKLIST_V1.md`
+
+Definición del producto:
+
+`docs/PRODUCTO_COMERCIAL_V1.md`
+
+## Regla de mantenimiento V1
+
+La V1 queda en **congelamiento funcional**. No se agregan módulos nuevos durante la etapa inicial de comercialización. Solo se aceptan:
+
+- correcciones de bugs reales;
+- mejoras de estabilidad;
+- ajustes de onboarding;
+- seguridad y aislamiento;
+- documentación y soporte.
+
+Las nuevas funciones deben planificarse para una versión posterior.
+
+## Desarrollo
+
+Requisitos:
+
+- Node.js 22+
+- npm
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/licancoffee/Repository-name-crm-pyme-base.git
+cd Repository-name-crm-pyme-base
+npm ci
+npx tsc --noEmit
+npm run build
 npm run dev
 ```
+
+## Rama de trabajo y checkpoint
+
+Rama operativa certificada:
+
+`respaldo-instalador-avanzado`
+
+Checkpoint de cierre comercial:
+
+`checkpoint-crm-pyme-base-v1-comercial-20260907`
+
+---
+
+CRM Comercial PyME Base V1 — producto configurable y comercializable para PyMEs.
