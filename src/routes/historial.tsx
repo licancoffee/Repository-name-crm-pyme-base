@@ -381,19 +381,21 @@ function Historial() {
                     )}
 
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <Button
-                        variant="outline"
-                        className="h-12"
-                        onClick={() =>
-                          saleWhatsapp(
-                            sale,
-                          )
-                        }
-                      >
-                        <MessageCircle className="mr-2 h-4 w-4" />
+                      {!isCancelled && (
+                        <Button
+                          variant="outline"
+                          className="h-12"
+                          onClick={() =>
+                            saleWhatsapp(
+                              sale,
+                            )
+                          }
+                        >
+                          <MessageCircle className="mr-2 h-4 w-4" />
 
-                        Reenviar comprobante
-                      </Button>
+                          Reenviar comprobante
+                        </Button>
+                      )}
 
                       {!isCancelled && (
                         <Button
