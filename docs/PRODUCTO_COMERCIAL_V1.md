@@ -1,12 +1,24 @@
-# CRM Comercial PyME Base — V1
+# NexoPyme — Producto Comercial V1
 
-## Identidad del proyecto
+## Identidad del producto
 
-CRM Comercial PyME Base es un producto independiente de Lican Coffee SpA, diseñado para instalarse y comercializarse a múltiples PyMEs.
+**NexoPyme** es el nombre comercial de trabajo para el CRM Comercial PyME Base desarrollado por Lican Coffee SpA, diseñado para instalarse y comercializarse a múltiples PyMEs.
 
-No comparte base de datos, configuración, CLIENT_ID, credenciales, branding ni lógica específica de Lican Coffee.
+Posicionamiento comercial recomendado:
 
-## Principios de arquitectura
+**NexoPyme — Sistema de ventas y gestión para pequeños negocios**
+
+**Clientes · Ventas · Stock · Cotizaciones · WhatsApp**
+
+Mensaje de apoyo:
+
+> Un sistema simple para ordenar y controlar tus ventas, clientes, stock y cotizaciones desde el celular o computador.
+
+No se debe vender como ERP contable ni como sistema de facturación electrónica SII en V1.
+
+> Nota: el nombre comercial debe tratarse como nombre de trabajo mientras no se confirme formalmente disponibilidad marcaria y de dominio.
+
+## Arquitectura multiempresa
 
 - Cada empresa instalada tiene su propio `CLIENT_ID`.
 - Cada empresa tiene su propio backend operativo Apps Script y su propia hoja operativa.
@@ -41,16 +53,22 @@ Se reutilizan patrones ya probados, nunca datos ni configuración específica:
 3. Productos y clientes. ✅
 4. Conexión operativa por `CLIENT_ID`. ✅
 5. Venta y descuento de stock. ✅
-6. Anulación y devolución de stock. ✅
-7. Cotización sin descuento de stock. ✅
-8. PDF de cotización. ✅
-9. Envío de cotización por correo. ✅
-10. Envío/compartición por WhatsApp. ✅
-11. Conversión de cotización a venta. ✅
-12. Aislamiento multiempresa y rechazo de `CLIENT_ID` incorrecto. ✅
-13. Navegación e identidad persistente en PC y móvil. ✅
-14. Idempotencia de anulación sin doble reposición de stock. ✅
-15. Typecheck, build y despliegue final verdes. ✅
+6. Comprobante de venta por WhatsApp. ✅
+7. Anulación y devolución de stock. ✅
+8. Cotización sin descuento de stock. ✅
+9. PDF de cotización. ✅
+10. Envío de cotización por correo. ✅
+11. Envío/compartición por WhatsApp. ✅
+12. Conversión de cotización a venta. ✅
+13. Descuento de inventario al convertir cotización. ✅
+14. Aislamiento multiempresa y rechazo de `CLIENT_ID` incorrecto. ✅
+15. Navegación e identidad persistente en PC y móvil. ✅
+16. Idempotencia de anulación sin doble reposición de stock. ✅
+17. Piloto comercial de 7 días con planilla independiente. ✅
+18. Generador administrativo de pilotos. ✅
+19. Seguimiento comercial de prospectos y pilotos. ✅
+20. Contador regresivo de días de piloto. ✅
+21. CI posterior al ajuste de historial: verde. ✅
 
 ## Backend operativo V4 — 1.4.0
 
@@ -72,42 +90,88 @@ Características certificadas:
 - Acción `reenviarCotizacion` sin duplicar cotización.
 - Conversión de cotización a venta.
 
-## Certificación PC / móvil
+## Certificación comercial de piloto real
 
-La V1 fue validada automáticamente con dos perfiles de navegador:
+Piloto certificado:
 
-- PC: 1440 × 900.
-- Móvil: 390 × 844.
+`PILOTO-PILOTO-DEMO-01-B8C2`
 
-La prueba recorrió Inicio, Venta, Cotizaciones, Clientes, Stock e Historial, comprobando:
+Pruebas manuales completadas:
 
-- identidad de la empresa correcta;
-- ausencia de `EMPRESA DEMO`;
-- conservación del `CLIENT_ID`;
-- persistencia de identidad al navegar a rutas sin query explícita.
+- venta con dos productos;
+- descuento correcto de inventario;
+- comprobante enviado por WhatsApp;
+- anulación de venta;
+- reposición correcta de inventario;
+- cotización creada;
+- PDF generado;
+- correo recibido con PDF adjunto;
+- cotización compartida por WhatsApp;
+- cotización convertida a venta;
+- registro de la venta resultante;
+- descuento de inventario tras conversión.
 
-Resultado final:
+Resultado: **flujo comercial operativo de punta a punta aprobado**.
 
-- `PC_OK`
-- `MOVIL_OK`
-- `PC_MOVIL_NAVEGACION_IDENTIDAD_OK`
+## Ajustes de cierre comercial
 
-## Despliegue seguro del backend V4
+- Las ventas anuladas ya no ofrecen la acción de reenviar comprobante en Historial.
+- El piloto comercial activo usa contador regresivo en la planilla `NexoPyme - Prospectos y Pilotos`.
+- Para V1, la expiración se administra comercialmente: el piloto se marca como vencido y la suspensión técnica automática queda fuera del alcance hasta validar el proceso con clientes reales.
 
-Para una empresa ya instalada:
+## Propuesta comercial inicial
 
-1. Abrir el Apps Script vinculado a la hoja operativa de esa empresa.
-2. Reemplazar completamente el contenido de `Código.gs` por `CRMBaseOperativoV4.gs`.
-3. No crear un segundo archivo `.gs` de respaldo dentro del mismo proyecto.
-4. Guardar.
-5. Administrar implementaciones → editar la implementación existente → Nueva versión.
-6. Mantener la misma URL `/exec`.
-7. Verificar `ping` y confirmar versión `1.4.0`.
-8. Generar una cotización de prueba y verificar correo, PDF, estado e inventario.
+Precio normal recomendado:
+
+- **$24.990 + IVA / mes**
+- **$59.990 + IVA** implementación inicial
+
+Oferta fundadores — primeros 10 clientes:
+
+- **$19.990 + IVA / mes**
+- **$39.990 + IVA** implementación inicial
+
+Proceso de adquisición:
+
+**Prospecto → Demo de 10 minutos → Piloto individual 7 días → Cliente pagado**
+
+El demo maestro no se entrega por 7 días; el piloto debe ser una instalación individual.
+
+## Qué se vende
+
+Beneficios a comunicar, en este orden:
+
+1. Ordenar ventas y clientes.
+2. Saber qué stock queda.
+3. Crear cotizaciones profesionales.
+4. Compartir comprobantes y cotizaciones por WhatsApp.
+5. Tener historial y control básico del negocio desde celular o computador.
+
+Evitar abrir la conversación con tecnicismos como `CRM`, `backend`, `CLIENT_ID`, Apps Script o arquitectura multiempresa.
+
+## Guion breve de presentación
+
+> NexoPyme te ayuda a tener tus ventas, clientes, stock y cotizaciones en un solo lugar. Puedes usarlo desde el celular o computador y compartir comprobantes y cotizaciones directamente por WhatsApp. Te hacemos una demo de 10 minutos y, si te sirve, te dejamos un piloto de 7 días con tu negocio para que lo pruebes.
+
+## Lanzamiento controlado
+
+Objetivo inicial:
+
+- captar los primeros 10 clientes fundadores;
+- trabajar con comercios pequeños y negocios de servicios que hoy operan con cuadernos, Excel, WhatsApp o información dispersa;
+- comenzar con captación directa y demostraciones, no con publicidad masiva pagada.
+
+Canales recomendados:
+
+- Marketplace y grupos de PyMEs;
+- WhatsApp directo a contactos comerciales;
+- Facebook e Instagram;
+- red local de comerciantes de Villarrica, Lican Ray y comunas cercanas;
+- referidos de clientes piloto.
 
 ## Estado comercial
 
-**CRM Comercial PyME Base V1 queda certificado para inicio de comercialización controlada.**
+**NexoPyme V1 queda apto para inicio de comercialización controlada y pilotos reales.**
 
 Durante esta etapa no se agregan módulos nuevos. Solo se aceptan:
 
@@ -115,6 +179,7 @@ Durante esta etapa no se agregan módulos nuevos. Solo se aceptan:
 - mejoras de estabilidad;
 - seguridad y aislamiento;
 - ajustes de onboarding;
-- documentación y soporte.
+- documentación y soporte;
+- mejoras comerciales que reduzcan fricción para captar o convertir clientes.
 
 Las nuevas funciones se planifican para versiones posteriores.
