@@ -224,7 +224,7 @@ export function AppShell({
               </p>
 
               <p className="truncate text-[10px] text-muted-foreground">
-                Gestión comercial
+                Kaizu · Sistema de ventas y gestión
               </p>
             </div>
           </div>
@@ -247,12 +247,12 @@ export function AppShell({
             <div className="min-w-0">
               <h1 className="truncate font-display text-xl font-bold leading-tight">
                 {title ??
-                  `${company.name} CRM`}
+                  `Kaizu · ${company.name}`}
               </h1>
 
               <p className="truncate text-xs opacity-80">
                 {subtitle ??
-                  "Gestión comercial"}
+                  "Ordena. Vende. Crece."}
               </p>
             </div>
           </div>
