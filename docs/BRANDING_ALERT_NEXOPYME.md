@@ -1,22 +1,27 @@
-# Alerta de branding antes de difusión pública
+# Alerta histórica de branding — NexoPyme
 
 ## Estado
 
-**No iniciar difusión pública masiva bajo el nombre NexoPyme hasta definir un nombre comercial alternativo.**
+**RESUELTO: NexoPyme deja de usarse como marca comercial del producto.**
 
-## Motivo
+El nombre comercial adoptado para la V1 es **Kaizu**.
 
-En revisión pública realizada el 10-09-2026 se identificó uso comercial previo de **NexoPyme** en Chile por una consultora de Temuco y antecedentes públicos de una solicitud marcaria `Nexopyme` ante INAPI asociada a NEXOPYME CONSULTORÍA LIMITADA, con procedimiento de oposición visible en estados diarios de INAPI.
+## Antecedente
 
-Esto no determina por sí solo el resultado jurídico final de una marca, pero sí constituye un riesgo suficientemente alto para evitar invertir en difusión, diseño, dominio o publicidad bajo ese nombre sin revisión marcaria profesional.
+En revisión pública realizada el 10-09-2026 se identificó uso comercial previo de **NexoPyme** en Chile y antecedentes marcarios asociados a ese nombre. Por ese motivo se decidió no lanzar el producto bajo dicha denominación.
 
-## Acción recomendada
+## Resolución
 
-1. Mantener `NexoPyme` solo como nombre interno/transitorio del proyecto.
-2. Elegir un nombre comercial nuevo antes de difusión pública.
-3. Revisar disponibilidad en INAPI y dominio `.cl` antes de fijar el nuevo nombre.
-4. Una vez elegido, actualizar textos comerciales, branding visual, demo y documentación sin tocar la arquitectura funcional del CRM.
+1. La marca comercial de trabajo pasa a ser **Kaizu**.
+2. El posicionamiento queda como **Kaizu — Sistema de ventas y gestión para pequeños negocios**.
+3. Lema: **Ordena. Vende. Crece.**
+4. Se actualizan documentos, demo, seguimiento comercial y material de lanzamiento.
+5. Los identificadores técnicos históricos y URLs existentes pueden mantenerse cuando cambiarlos implique riesgo de romper instalaciones certificadas.
+
+## Dominio
+
+Al momento de la revisión del 10-09-2026, `kaizu.cl` aparecía disponible para registro. Esto no equivale a registro marcario ni reserva de dominio.
 
 ## Estado del producto
 
-El producto técnico V1 sigue apto para comercialización controlada. El bloqueo es de **branding**, no funcional.
+Kaizu V1 queda apto para comercialización controlada y pilotos reales.
