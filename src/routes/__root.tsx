@@ -33,6 +33,7 @@ import {
 
 import {
   getActiveClientId,
+  getRequestedClientId,
   rememberActiveClientId,
 } from "../lib/config/active-client";
 
@@ -250,12 +251,12 @@ export const Route =
         },
         {
           title:
-            `${clientConfig.company.name} CRM`,
+            "Kaizu — Sistema de ventas y gestión",
         },
         {
           name: "description",
           content:
-            `CRM de gestión comercial de ${clientConfig.company.name}.`,
+            "Kaizu ayuda a pequeños negocios a ordenar ventas, clientes, stock y cotizaciones.",
         },
         {
           property: "og:type",
@@ -348,6 +349,42 @@ function RootShell({
   );
 }
 
+function KaizuWelcome() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
+      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-7 text-center shadow-[var(--shadow-card)] sm:p-10">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-sm">
+          K
+        </div>
+
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">
+          Sistema de ventas y gestión
+        </p>
+
+        <h1 className="mt-2 font-display text-4xl font-bold text-foreground">
+          Kaizu
+        </h1>
+
+        <p className="mt-2 text-lg font-semibold text-foreground">
+          Ordena. Vende. Crece.
+        </p>
+
+        <p className="mx-auto mt-5 max-w-md text-sm leading-6 text-muted-foreground">
+          Accede a tu sistema desde el enlace asignado a tu empresa. Cada negocio mantiene su propia configuración, clientes, productos y operación.
+        </p>
+
+        <div className="mt-7 rounded-2xl bg-secondary px-5 py-4 text-sm text-secondary-foreground">
+          Si ya eres cliente de Kaizu, utiliza tu enlace de acceso personalizado.
+        </div>
+
+        <p className="mt-6 text-xs text-muted-foreground">
+          Ventas · Clientes · Stock · Cotizaciones
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function RootComponent() {
   const {
     queryClient,
@@ -366,18 +403,35 @@ function RootComponent() {
   ] =
     useState("");
 
+  const [
+    requestedClientId,
+    setRequestedClientId,
+  ] =
+    useState("");
+
   useEffect(() => {
     let active = true;
 
     async function loadConfig() {
-      try {
-        const activeClientId =
-          getActiveClientId();
+      const requested =
+        getRequestedClientId();
 
+      if (!active) {
+        return;
+      }
+
+      setRequestedClientId(
+        requested,
+      );
+
+      if (!requested) {
+        setRuntimeReady(true);
+        return;
+      }
+
+      try {
         const endpoint =
-          activeClientId
-            ? `/api/runtime-bootstrap?clientId=${encodeURIComponent(activeClientId)}`
-            : "/api/runtime-bootstrap";
+          `/api/runtime-bootstrap?clientId=${encodeURIComponent(requested)}`;
 
         const response =
           await fetch(
@@ -401,6 +455,10 @@ function RootComponent() {
 
         if (result.clientId) {
           rememberActiveClientId(
+            result.clientId,
+          );
+
+          setRequestedClientId(
             result.clientId,
           );
         }
@@ -471,6 +529,10 @@ function RootComponent() {
         </div>
       </div>
     );
+  }
+
+  if (!requestedClientId) {
+    return <KaizuWelcome />;
   }
 
   return (
