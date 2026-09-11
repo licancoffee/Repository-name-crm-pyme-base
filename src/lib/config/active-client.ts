@@ -38,30 +38,38 @@ export function rememberActiveClientId(
   );
 }
 
-export function getActiveClientId() {
+export function getRequestedClientId() {
   if (
-    typeof window !== "undefined"
+    typeof window === "undefined"
   ) {
-    const fromUrl =
-      new URLSearchParams(
-        window.location.search,
-      ).get("clientId")?.trim() || "";
+    return "";
+  }
 
-    if (fromUrl) {
-      rememberActiveClientId(
-        fromUrl,
-      );
-      return fromUrl;
-    }
+  const fromUrl =
+    new URLSearchParams(
+      window.location.search,
+    ).get("clientId")?.trim() || "";
 
-    const saved =
-      window.localStorage.getItem(
-        ACTIVE_CLIENT_KEY,
-      )?.trim() || "";
+  if (fromUrl) {
+    rememberActiveClientId(
+      fromUrl,
+    );
+    return fromUrl;
+  }
 
-    if (saved) {
-      return saved;
-    }
+  return (
+    window.localStorage.getItem(
+      ACTIVE_CLIENT_KEY,
+    )?.trim() || ""
+  );
+}
+
+export function getActiveClientId() {
+  const requestedClientId =
+    getRequestedClientId();
+
+  if (requestedClientId) {
+    return requestedClientId;
   }
 
   return clientIdFromRut(
