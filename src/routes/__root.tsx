@@ -352,32 +352,22 @@ function RootShell({
 function KaizuWelcome() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-7 text-center shadow-[var(--shadow-card)] sm:p-10">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-sm">
-          K
-        </div>
+      <div className="w-full max-w-2xl rounded-3xl border border-border bg-card px-7 py-10 text-center shadow-[var(--shadow-card)] sm:px-12 sm:py-12">
+        <img
+          src="/kaizu-brand.svg"
+          alt="Kaizu · Ordena. Vende. Crece."
+          className="mx-auto w-full max-w-[520px]"
+        />
 
-        <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">
-          Sistema de ventas y gestión
-        </p>
-
-        <h1 className="mt-2 font-display text-4xl font-bold text-foreground">
-          Kaizu
-        </h1>
-
-        <p className="mt-2 text-lg font-semibold text-foreground">
-          Ordena. Vende. Crece.
-        </p>
-
-        <p className="mx-auto mt-5 max-w-md text-sm leading-6 text-muted-foreground">
+        <p className="mx-auto mt-9 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
           Accede a tu sistema desde el enlace asignado a tu empresa. Cada negocio mantiene su propia configuración, clientes, productos y operación.
         </p>
 
-        <div className="mt-7 rounded-2xl bg-secondary px-5 py-4 text-sm text-secondary-foreground">
+        <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-secondary px-6 py-5 text-base font-medium leading-6 text-secondary-foreground sm:text-lg">
           Si ya eres cliente de Kaizu, utiliza tu enlace de acceso personalizado.
         </div>
 
-        <p className="mt-6 text-xs text-muted-foreground">
+        <p className="mt-8 text-sm font-medium tracking-wide text-muted-foreground sm:text-base">
           Ventas · Clientes · Stock · Cotizaciones
         </p>
       </div>
