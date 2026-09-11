@@ -39,25 +39,25 @@ export const Route =
       meta: [
         {
           title:
-            `${clientConfig.company.name} CRM — Ventas e inventario`,
+            `Kaizu · ${clientConfig.company.name} — Sistema de ventas y gestión`,
         },
         {
           name:
             "description",
           content:
-            `CRM de ${clientConfig.company.name} para gestionar ventas, clientes, inventario e historial comercial.`,
+            `Kaizu para ${clientConfig.company.name}: ventas, clientes, stock, cotizaciones e historial comercial.`,
         },
         {
           property:
             "og:title",
           content:
-            `${clientConfig.company.name} CRM`,
+            `Kaizu · ${clientConfig.company.name}`,
         },
         {
           property:
             "og:description",
           content:
-            `Gestión de ventas, clientes, inventario e historial de ${clientConfig.company.name}.`,
+            `Sistema de ventas y gestión para ${clientConfig.company.name}.`,
         },
       ],
     }),
@@ -143,8 +143,8 @@ function Index() {
 
   return (
     <AppShell
-      title={`${companyName} CRM`}
-      subtitle="Panel principal"
+      title={`Kaizu · ${companyName}`}
+      subtitle="Ordena. Vende. Crece."
     >
       <div className="grid grid-cols-3 gap-3">
         <Stat
