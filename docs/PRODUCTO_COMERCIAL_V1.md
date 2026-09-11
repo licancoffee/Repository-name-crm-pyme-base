@@ -1,14 +1,18 @@
-# NexoPyme — Producto Comercial V1
+# Kaizu — Producto Comercial V1
 
 ## Identidad del producto
 
-**NexoPyme** es el nombre comercial de trabajo para el CRM Comercial PyME Base desarrollado por Lican Coffee SpA, diseñado para instalarse y comercializarse a múltiples PyMEs.
+**Kaizu** es la marca comercial elegida para el CRM Comercial PyME Base desarrollado por Lican Coffee SpA, diseñado para instalarse y comercializarse a múltiples PyMEs.
 
 Posicionamiento comercial recomendado:
 
-**NexoPyme — Sistema de ventas y gestión para pequeños negocios**
+**Kaizu — Sistema de ventas y gestión para pequeños negocios**
 
 **Clientes · Ventas · Stock · Cotizaciones · WhatsApp**
+
+Lema comercial:
+
+**Ordena. Vende. Crece.**
 
 Mensaje de apoyo:
 
@@ -16,7 +20,7 @@ Mensaje de apoyo:
 
 No se debe vender como ERP contable ni como sistema de facturación electrónica SII en V1.
 
-> Nota: el nombre comercial debe tratarse como nombre de trabajo mientras no se confirme formalmente disponibilidad marcaria y de dominio.
+> Estado de marca: `kaizu.cl` fue encontrado disponible al momento de la revisión del 10-09-2026. La adopción comercial del nombre no equivale por sí sola a una autorización o registro marcario definitivo; antes de una inversión importante en marca se recomienda completar la revisión formal y presentación que corresponda ante INAPI.
 
 ## Arquitectura multiempresa
 
@@ -116,7 +120,7 @@ Resultado: **flujo comercial operativo de punta a punta aprobado**.
 ## Ajustes de cierre comercial
 
 - Las ventas anuladas ya no ofrecen la acción de reenviar comprobante en Historial.
-- El piloto comercial activo usa contador regresivo en la planilla `NexoPyme - Prospectos y Pilotos`.
+- El piloto comercial activo usa contador regresivo en la planilla `Kaizu - Prospectos y Pilotos`.
 - Para V1, la expiración se administra comercialmente: el piloto se marca como vencido y la suspensión técnica automática queda fuera del alcance hasta validar el proceso con clientes reales.
 
 ## Propuesta comercial inicial
@@ -151,7 +155,7 @@ Evitar abrir la conversación con tecnicismos como `CRM`, `backend`, `CLIENT_ID`
 
 ## Guion breve de presentación
 
-> NexoPyme te ayuda a tener tus ventas, clientes, stock y cotizaciones en un solo lugar. Puedes usarlo desde el celular o computador y compartir comprobantes y cotizaciones directamente por WhatsApp. Te hacemos una demo de 10 minutos y, si te sirve, te dejamos un piloto de 7 días con tu negocio para que lo pruebes.
+> Kaizu te ayuda a tener tus ventas, clientes, stock y cotizaciones en un solo lugar. Puedes usarlo desde el celular o computador y compartir comprobantes y cotizaciones directamente por WhatsApp. Te hacemos una demo de 10 minutos y, si te sirve, te dejamos un piloto de 7 días con tu negocio para que lo pruebes.
 
 ## Lanzamiento controlado
 
@@ -171,7 +175,7 @@ Canales recomendados:
 
 ## Estado comercial
 
-**NexoPyme V1 queda apto para inicio de comercialización controlada y pilotos reales.**
+**Kaizu V1 queda apto para inicio de comercialización controlada y pilotos reales.**
 
 Durante esta etapa no se agregan módulos nuevos. Solo se aceptan:
 
