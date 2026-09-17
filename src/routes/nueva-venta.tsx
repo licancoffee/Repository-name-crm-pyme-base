@@ -39,7 +39,8 @@ import {
   whatsappText,
 } from "@/lib/crm/calc";
 import { clp, pct, qtyFmt } from "@/lib/crm/format";
-import { addCustomer, syncErp, useDB } from "@/lib/crm/store";
+import { addCustomer, saveSale, syncErp, useDB } from "@/lib/crm/store";
+import { getActiveClientId, isDemoClientId } from "@/lib/config/active-client";
 import { buildErpSalePayload } from "@/lib/crm/erp/payload";
 import { registrarVentaErp } from "@/lib/crm/erp/sales.functions";
 import {
@@ -768,6 +769,20 @@ function NuevaVenta() {
         status: "GUARDADA",
       };
 
+      if (isDemoClientId(getActiveClientId())) {
+        const {
+          id: _id,
+          dateISO: _dateISO,
+          status: _status,
+          ...demoSale
+        } = sale;
+
+        saveSale(demoSale);
+        toast.success("Venta simulada guardada en la demo");
+        navigate({ to: "/historial" });
+        return;
+      }
+
       const payload = buildErpSalePayload(sale, customer);
 
       const result = await registrarVentaErp({ data: payload });
@@ -1265,5 +1280,4 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
     </div>
   );
 }
-
 

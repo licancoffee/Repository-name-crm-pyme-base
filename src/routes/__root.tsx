@@ -32,8 +32,13 @@ import {
 } from "../lib/config/client";
 
 import {
+  demoClientConfig,
+} from "../lib/config/demo";
+
+import {
   getActiveClientId,
   getRequestedClientId,
+  isDemoClientId,
   rememberActiveClientId,
 } from "../lib/config/active-client";
 
@@ -433,6 +438,12 @@ function RootComponent() {
       );
 
       if (!requested) {
+        setRuntimeReady(true);
+        return;
+      }
+
+      if (isDemoClientId(requested)) {
+        applyRuntimeClientConfig(demoClientConfig);
         setRuntimeReady(true);
         return;
       }

@@ -20,6 +20,7 @@ import {
 
 import {
   getActiveClientId,
+  isDemoClientId,
 } from "@/lib/config/active-client";
 
 import {
@@ -191,6 +192,9 @@ export function AppShell({
       ? window.location.pathname
       : "";
 
+  const demoMode =
+    isDemoClientId(activeClientId);
+
   function hrefFor(
     path: string,
   ) {
@@ -232,6 +236,18 @@ export function AppShell({
           <ErpStatusBar />
         </div>
       </div>
+
+      {demoMode && (
+        <div className="border-b border-cyan-200 bg-cyan-50 px-4 py-2 text-center text-xs font-medium text-cyan-900">
+          Demo interactiva · Los cambios se guardan solo en este navegador ·{" "}
+          <a
+            href="mailto:licancoffee.spa@gmail.com?subject=Quiero%20contratar%20Kaizu"
+            className="font-bold underline underline-offset-2"
+          >
+            Solicitar Kaizu
+          </a>
+        </div>
+      )}
 
       <header
         className="px-4 py-5 text-white"

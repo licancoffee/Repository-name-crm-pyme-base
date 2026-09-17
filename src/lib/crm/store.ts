@@ -5,6 +5,7 @@ import {
 
 import {
   getActiveClientId,
+  isDemoClientId,
 } from "@/lib/config/active-client";
 
 import {
@@ -202,6 +203,15 @@ function hydrate() {
 }
 
 async function syncSources() {
+  if (isDemoClientId(getActiveClientId())) {
+    erpStatus = {
+      loading: false,
+      source: "local",
+    };
+    emit();
+    return;
+  }
+
   await syncInstalledProducts();
   await syncErp();
 }

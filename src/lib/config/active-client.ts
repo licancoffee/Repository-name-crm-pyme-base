@@ -1,7 +1,23 @@
 import { clientConfig } from "./client";
+import { DEMO_CLIENT_ID } from "./demo";
 
 const ACTIVE_CLIENT_KEY =
   "crm-pyme-active-client-id";
+
+export function isDemoHostname() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return (
+    window.location.hostname === "demo.kaizu.cl" ||
+    new URLSearchParams(window.location.search).get("demo") === "1"
+  );
+}
+
+export function isDemoClientId(clientId: string) {
+  return String(clientId || "").trim().toUpperCase() === DEMO_CLIENT_ID;
+}
 
 export function clientIdFromRut(
   rut: string,
@@ -43,6 +59,11 @@ export function getRequestedClientId() {
     typeof window === "undefined"
   ) {
     return "";
+  }
+
+  if (isDemoHostname()) {
+    rememberActiveClientId(DEMO_CLIENT_ID);
+    return DEMO_CLIENT_ID;
   }
 
   const fromUrl =
