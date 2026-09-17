@@ -353,11 +353,29 @@ function KaizuWelcome() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
       <div className="w-full max-w-2xl rounded-3xl border border-border bg-card px-7 py-10 text-center shadow-[var(--shadow-card)] sm:px-12 sm:py-12">
-        <img
-          src="/kaizu-brand.svg"
-          alt="Kaizu · Ordena. Vende. Crece."
-          className="mx-auto w-full max-w-[520px]"
-        />
+        <div className="mx-auto flex max-w-[520px] items-center justify-center gap-4 sm:gap-6">
+          <img
+            src="/kaizu-isotipo.png"
+            alt="Isotipo de Kaizu"
+            className="h-24 w-24 shrink-0 object-contain sm:h-32 sm:w-32"
+          />
+
+          <div className="text-left">
+            <p
+              className="text-4xl font-bold leading-none text-[#0a3766] sm:text-6xl"
+              style={{
+                fontFamily:
+                  "Georgia, 'Times New Roman', serif",
+              }}
+            >
+              Kaizu
+            </p>
+
+            <p className="mt-2 whitespace-nowrap text-base font-medium text-[#0e4a87] sm:text-2xl">
+              Ordena. Vende. Crece.
+            </p>
+          </div>
+        </div>
 
         <p className="mx-auto mt-9 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
           Accede a tu sistema desde el enlace asignado a tu empresa. Cada negocio mantiene su propia configuración, clientes, productos y operación.
@@ -480,66 +498,3 @@ function RootComponent() {
           setRuntimeError(
             result.message,
           );
-        }
-      } catch (error) {
-        if (!active) {
-          return;
-        }
-
-        setRuntimeError(
-          error instanceof Error
-            ? error.message
-            : "No fue posible cargar la configuración.",
-        );
-      } finally {
-        if (active) {
-          setRuntimeReady(
-            true,
-          );
-        }
-      }
-    }
-
-    loadConfig();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (!runtimeReady) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
-
-          <p className="mt-4 text-sm text-muted-foreground">
-            Cargando configuración...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!requestedClientId) {
-    return <KaizuWelcome />;
-  }
-
-  return (
-    <QueryClientProvider
-      client={queryClient}
-    >
-      {runtimeError && (
-        <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs text-warning">
-          {runtimeError}
-        </div>
-      )}
-
-      <Outlet />
-
-      <Toaster
-        position="top-center"
-      />
-    </QueryClientProvider>
-  );
-}
