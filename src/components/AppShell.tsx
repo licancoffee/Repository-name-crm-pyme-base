@@ -241,7 +241,9 @@ export function AppShell({
         <div className="border-b border-cyan-200 bg-cyan-50 px-4 py-2 text-center text-xs font-medium text-cyan-900">
           Demo interactiva · Los cambios se guardan solo en este navegador ·{" "}
           <a
-            href="mailto:licancoffee.spa@gmail.com?subject=Quiero%20contratar%20Kaizu"
+            href="https://wa.me/56951012725?text=Hola%2C%20prob%C3%A9%20la%20demo%20de%20Kaizu%20y%20quiero%20informaci%C3%B3n%20para%20mi%20negocio."
+            target="_blank"
+            rel="noreferrer"
             className="font-bold underline underline-offset-2"
           >
             Solicitar Kaizu
