@@ -498,3 +498,66 @@ function RootComponent() {
           setRuntimeError(
             result.message,
           );
+        }
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setRuntimeError(
+          error instanceof Error
+            ? error.message
+            : "No fue posible cargar la configuración.",
+        );
+      } finally {
+        if (active) {
+          setRuntimeReady(
+            true,
+          );
+        }
+      }
+    }
+
+    loadConfig();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!runtimeReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
+
+          <p className="mt-4 text-sm text-muted-foreground">
+            Cargando configuración...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!requestedClientId) {
+    return <KaizuWelcome />;
+  }
+
+  return (
+    <QueryClientProvider
+      client={queryClient}
+    >
+      {runtimeError && (
+        <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs text-warning">
+          {runtimeError}
+        </div>
+      )}
+
+      <Outlet />
+
+      <Toaster
+        position="top-center"
+      />
+    </QueryClientProvider>
+  );
+}
