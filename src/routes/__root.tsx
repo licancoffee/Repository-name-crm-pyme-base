@@ -357,7 +357,11 @@ function RootShell({
 function KaizuWelcome() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
-      <div className="w-full max-w-2xl rounded-3xl border border-border bg-card px-7 py-10 text-center shadow-[var(--shadow-card)] sm:px-12 sm:py-12">
+      <div className="w-full max-w-3xl rounded-3xl border border-border bg-card px-7 py-10 text-center shadow-[var(--shadow-card)] sm:px-12 sm:py-12">
+        <p className="mx-auto mb-7 w-fit rounded-full bg-cyan-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cyan-800">
+          Sistema simple para pequeños negocios
+        </p>
+
         <div className="mx-auto flex max-w-[520px] items-center justify-center gap-4 sm:gap-6">
           <img
             src="/kaizu-isotipo.png"
@@ -382,17 +386,79 @@ function KaizuWelcome() {
           </div>
         </div>
 
-        <p className="mx-auto mt-9 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
-          Accede a tu sistema desde el enlace asignado a tu empresa. Cada negocio mantiene su propia configuración, clientes, productos y operación.
+        <h1 className="mx-auto mt-9 max-w-2xl font-display text-2xl font-bold leading-tight text-foreground sm:text-4xl">
+          Controla tus ventas, clientes y stock desde un solo lugar
+        </h1>
+
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+          Usa Kaizu desde el celular o computador, genera cotizaciones y comparte comprobantes directamente por WhatsApp.
         </p>
 
-        <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-secondary px-6 py-5 text-base font-medium leading-6 text-secondary-foreground sm:text-lg">
-          Si ya eres cliente de Kaizu, utiliza tu enlace de acceso personalizado.
+        <div className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-3">
+          {[
+            ["Ventas ordenadas", "Registra cada venta y consulta tu historial."],
+            ["Stock bajo control", "Visualiza existencias y alertas de inventario."],
+            ["Clientes y cotizaciones", "Mantén la información lista para vender."],
+          ].map(([title, description]) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-border bg-background p-4"
+            >
+              <p className="font-bold text-foreground">
+                {title}
+              </p>
+
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                {description}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <p className="mt-8 text-sm font-medium tracking-wide text-muted-foreground sm:text-base">
-          Ventas · Clientes · Stock · Cotizaciones
-        </p>
+        <div className="mx-auto mt-8 max-w-2xl rounded-2xl bg-secondary px-6 py-6 text-secondary-foreground">
+          <p className="text-xs font-bold uppercase tracking-[0.14em]">
+            Oferta fundadores · Primeros 10 clientes
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            $19.990 + IVA
+            <span className="text-base font-medium">
+              {" "}/ mes
+            </span>
+          </p>
+
+          <p className="mt-2 text-sm">
+            Implementación inicial $39.990 + IVA · Piloto personalizado de 7 días
+          </p>
+        </div>
+
+        <div className="mx-auto mt-7 flex max-w-2xl flex-col justify-center gap-3 sm:flex-row">
+          <a
+            href="https://demo.kaizu.cl/?clientId=KAIZU-DEMO"
+            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-[#0a3766] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#082d54]"
+          >
+            Probar demo gratis
+          </a>
+
+          <a
+            href="https://wa.me/56951012725?text=Hola%2C%20quiero%20conocer%20Kaizu%20para%20mi%20negocio."
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-[#0a3766] bg-white px-6 py-3 text-sm font-bold text-[#0a3766] transition-colors hover:bg-cyan-50"
+          >
+            Solicitar demo por WhatsApp
+          </a>
+        </div>
+
+        <div className="mx-auto mt-8 max-w-2xl border-t border-border pt-6">
+          <p className="text-sm font-medium text-muted-foreground">
+            ¿Ya eres cliente? Utiliza el enlace de acceso personalizado asignado a tu empresa.
+          </p>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Kaizu es una solución de Lican Coffee SpA · Atención comercial por WhatsApp
+          </p>
+        </div>
       </div>
     </div>
   );
