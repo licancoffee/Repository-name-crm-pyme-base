@@ -78,6 +78,17 @@ export function getRequestedClientId() {
     return fromUrl;
   }
 
+  const hostname =
+    window.location.hostname.toLowerCase();
+
+  if (
+    hostname === "app.kaizu.cl" ||
+    hostname === "kaizu.cl" ||
+    hostname === "www.kaizu.cl"
+  ) {
+    return "";
+  }
+
   return (
     window.localStorage.getItem(
       ACTIVE_CLIENT_KEY,
