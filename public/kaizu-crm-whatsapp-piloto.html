@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>KAIZU CRM · Piloto comercial WhatsApp</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#16283e;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#0a3766;color:#fff;padding:22px max(18px,calc((100vw - 1080px)/2))}header h1{margin:0;font-size:1.6rem}header p{margin:7px 0 0;color:#dceaf5}.badge{display:inline-block;background:#fff1cd;color:#754d00;border-radius:30px;padding:5px 10px;font-size:.78rem;font-weight:750}main{max-width:1080px;margin:auto;padding:22px 16px 50px}.warning{background:#fff9e8;border:1px solid #ecd38a;border-radius:12px;padding:13px;margin-bottom:20px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.stat,.card{background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:17px;box-shadow:0 2px 8px #13253b08}.stat strong{display:block;font-size:1.5rem;color:#0a3766}.stat span,.muted{color:#587087;font-size:.85rem}.grid{display:grid;grid-template-columns:minmax(270px,360px) 1fr;gap:18px}h2{margin:0 0 15px;font-size:1.1rem}label{display:block;font-size:.84rem;font-weight:650;margin:12px 0 5px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;min-height:42px;border:1px solid #bfd0dd;border-radius:9px;padding:9px;background:#fff}textarea{resize:vertical}button,.button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;text-align:center;background:#0a3766;color:#fff}button.secondary,.button.secondary{background:#eef3f8;color:#0a3766}button.danger{background:#fff0ef;color:#a32424}.actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.actions>*{font-size:.85rem}.filters{display:flex;gap:8px;margin-bottom:14px}.filters input{flex:1}.filters select{max-width:185px}.lead{border:1px solid #e0e8ef;border-radius:12px;padding:15px;margin:12px 0}.lead h3{margin:0 0 5px}.pill{display:inline-block;background:#e8f3ff;color:#0a3766;padding:4px 8px;border-radius:30px;font-size:.75rem;font-weight:650;margin:3px 3px 3px 0}.detail{font-size:.86rem;color:#41596d;margin:5px 0;overflow-wrap:anywhere}.empty{text-align:center;padding:36px 12px;color:#52677b}small{display:block;color:#607488;margin:8px 0}footer{font-size:.8rem;color:#607488;margin-top:22px}#notice{min-height:20px;color:#0a664b;font-size:.86rem}@media(max-width:740px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}header{padding:18px}.filters{flex-wrap:wrap}.filters select{max-width:none}}
+</style></head>
+<body><header><span class="badge">PILOTO AISLADO · SIN ENVÍOS AUTOMÁTICOS</span><h1>KAIZU CRM · WhatsApp</h1><p>Convierte consultas en oportunidades de venta. Ordena. Vende. Crece.</p></header>
+<main><div class="warning"><b>Versión de evaluación, no conectada al ERP ni a WhatsApp.</b> Los registros se guardan únicamente en este navegador. No uses datos reales sensibles o de clientes hasta disponer de almacenamiento seguro, control de acceso y respaldos. La apertura de WhatsApp necesita una acción manual.</div>
+<div class="stats"><div class="stat"><strong id="total">0</strong><span>Oportunidades</span></div><div class="stat"><strong id="open">0</strong><span>En gestión</span></div><div class="stat"><strong id="won">0</strong><span>Ganadas</span></div><div class="stat"><strong id="due">0</strong><span>Seguimientos vencidos o hoy</span></div></div>
+<div class="grid"><section class="card"><h2 id="formTitle">Nueva oportunidad</h2><form id="leadForm">
+<input type="hidden" id="leadId">
+<label for="name">Nombre del cliente *</label><input id="name" required maxlength="120" autocomplete="off">
+<label for="phone">WhatsApp (Chile, +56...)</label><input id="phone" type="tel" placeholder="+56 9 1234 5678" autocomplete="off">
+<label for="source">Origen</label><select id="source"><option>WhatsApp</option><option>Marketplace</option><option>Instagram</option><option>Referido</option><option>Otro</option></select>
+<label for="product">Producto o servicio de interés</label><input id="product" maxlength="180" placeholder="Ej. Cappuccino Vainilla 1 kg">
+<label for="amount">Cotización estimada (CLP)</label><input id="amount" type="number" min="0" max="999999999" step="1" placeholder="0">
+<label for="stage">Etapa comercial</label><select id="stage"><option value="NUEVA">Nueva consulta</option><option value="CONTACTADA">Contactada</option><option value="COTIZADA">Cotizada</option><option value="SEGUIMIENTO">En seguimiento</option><option value="GANADA">Venta ganada</option><option value="PERDIDA">Perdida</option></select>
+<label for="followup">Próximo seguimiento</label><input id="followup" type="date">
+<label for="notes">Notas comerciales</label><textarea id="notes" rows="3" maxlength="1500" placeholder="Lo que necesita el cliente y próximo paso"></textarea>
+<div class="actions"><button type="submit">Guardar oportunidad</button><button type="button" class="secondary" id="clear">Limpiar</button></div><p id="notice" role="status" aria-live="polite"></p></form></section>
+<section class="card"><h2>Pipeline de ventas</h2><div class="filters"><input id="search" aria-label="Buscar" placeholder="Buscar nombre, teléfono o producto..."><select id="filter" aria-label="Filtrar etapa"><option value="">Todas las etapas</option><option value="NUEVA">Nueva consulta</option><option value="CONTACTADA">Contactada</option><option value="COTIZADA">Cotizada</option><option value="SEGUIMIENTO">En seguimiento</option><option value="GANADA">Ganada</option><option value="PERDIDA">Perdida</option></select></div><div id="list"></div></section></div>
+<footer>KAIZU CRM · Prototipo de validación comercial. No accede a conversaciones ni sincroniza clientes, cotizaciones o ventas. Los datos locales pueden perderse al limpiar el navegador.</footer></main>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id), KEY="kaizu:crm-whatsapp:pilot:v1";
+const fields=["name","phone","source","product","amount","stage","followup","notes"];
+const statuses={NUEVA:"Nueva consulta",CONTACTADA:"Contactada",COTIZADA:"Cotizada",SEGUIMIENTO:"En seguimiento",GANADA:"Ganada",PERDIDA:"Perdida"};
+let data=[];
+try{const stored=JSON.parse(localStorage.getItem(KEY)||"[]");data=Array.isArray(stored)?stored.filter(x=>x&&typeof x.id==="string"):[]}catch{data=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch{$("notice").textContent="No fue posible guardar en este navegador.";return false}}
+function normalizedPhone(value){const digits=String(value||"").replace(/\D/g,"");if(/^9\d{8}$/.test(digits))return "56"+digits;if(/^569\d{8}$/.test(digits))return digits;return ""}
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n}
+function message(x){return "Hola "+x.name+", te contactamos de nuestro equipo comercial respecto de "+(x.product||"tu consulta")+". ¿Te puedo ayudar con alguna información para avanzar?"}
+function render(){
+ const q=$("search").value.trim().toLocaleLowerCase("es"); const f=$("filter").value;
+ const today=new Date().toLocaleDateString("en-CA");
+ $("total").textContent=data.length;$("open").textContent=data.filter(x=>!["GANADA","PERDIDA"].includes(x.stage)).length;
+ $("won").textContent=data.filter(x=>x.stage==="GANADA").length;
+ $("due").textContent=data.filter(x=>x.followup&&x.followup<=today&&!["GANADA","PERDIDA"].includes(x.stage)).length;
+ const list=$("list");list.replaceChildren();
+ const filtered=data.filter(x=>(!f||x.stage===f)&&[x.name,x.phone,x.product].join(" ").toLocaleLowerCase("es").includes(q)).sort((a,b)=>(a.followup||"9999").localeCompare(b.followup||"9999")||b.createdAt.localeCompare(a.createdAt));
+ if(!filtered.length){list.append(el("p","empty","No hay oportunidades para este filtro."));return}
+ filtered.forEach(x=>{
+ const card=el("article","lead");card.append(el("h3","",x.name));
+ const pill=el("span","pill",statuses[x.stage]||x.stage);card.append(pill);
+ if(x.followup&&x.followup<=today&&!["GANADA","PERDIDA"].includes(x.stage))card.append(el("span","pill","Seguimiento pendiente"));
+ const lines=[x.phone,x.source+(x.product?" · "+x.product:""),x.amount?"Monto estimado: "+new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0}).format(x.amount):"",x.followup?"Próximo contacto: "+x.followup:"",x.notes].filter(Boolean);
+ lines.forEach(t=>card.append(el("p","detail",t)));
+ const actions=el("div","actions");const edit=el("button","secondary","Editar");edit.type="button";edit.onclick=()=>{fields.forEach(k=>$(k).value=String(x[k]??""));$("leadId").value=x.id;$("formTitle").textContent="Editar oportunidad";scrollTo({top:0,behavior:"smooth"})};actions.append(edit);
+ const num=normalizedPhone(x.phone);
+ if(num){const link=el("a","button","Abrir WhatsApp");link.href="https://wa.me/"+num+"?text="+encodeURIComponent(message(x));link.target="_blank";link.rel="noopener noreferrer";link.title="Abre WhatsApp con texto sugerido; tú decides si enviarlo";actions.append(link)}
+ const del=el("button","danger","Eliminar");del.type="button";del.onclick=()=>{if(!confirm("¿Eliminar esta oportunidad del prototipo?"))return;const before=data;data=data.filter(v=>v.id!==x.id);if(!save())data=before;render()};actions.append(del);card.append(actions);list.append(card);
+ });
+}
+function reset(){$("leadForm").reset();$("leadId").value="";$("formTitle").textContent="Nueva oportunidad";$("notice").textContent=""}
+$("leadForm").addEventListener("submit",e=>{
+ e.preventDefault();const name=$("name").value.trim();if(!name)return;
+ const phone=$("phone").value.trim(),numeric=normalizedPhone(phone);if(phone&&!numeric){$("notice").textContent="Usa un celular chileno válido (+56 9 XXXX XXXX) o deja el campo vacío.";return}
+ const id=$("leadId").value,old=data.find(x=>x.id===id);
+ if(numeric&&data.some(x=>x.id!==id&&normalizedPhone(x.phone)===numeric)){ $("notice").textContent="Ya existe una oportunidad con este teléfono; revisa el listado.";return}
+ const now=new Date().toISOString();const record={id:old?.id||crypto.randomUUID(),createdAt:old?.createdAt||now,updatedAt:now,...Object.fromEntries(fields.map(k=>[k,$(k).value.trim()])),phone:numeric?("+"+numeric):"",amount:Number($("amount").value)||0};
+ const previous=data;data=old?data.map(x=>x.id===id?record:x):[record,...data];if(!save()){data=previous;return}reset();$("notice").textContent="Oportunidad guardada en este navegador.";render()
+});
+$("clear").onclick=reset;$("search").oninput=render;$("filter").onchange=render;render();
+})();
+</script></body></html>
